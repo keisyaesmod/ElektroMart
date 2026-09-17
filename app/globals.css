@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: #101828;
+}
+
+.login-page,
+.login-layout,
+.auth-page,
+.auth-layout {
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .login-layout,
+  .auth-layout {
+    flex-direction: column;
+  }
+
+  .login-layout > div,
+  .auth-layout > div {
+    flex-basis: auto !important;
+  }
+
+  .login-layout > div:first-child,
+  .auth-layout > div:first-child {
+    min-height: 440px !important;
+  }
+
+  .login-layout > div:last-child,
+  .auth-layout > div:last-child {
+    min-height: 560px;
+    padding: 36px 24px !important;
+  }
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
