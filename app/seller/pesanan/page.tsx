@@ -141,7 +141,7 @@ export default function Orders() {
                     </div>
                     <div>
                       <p className="font-semibold text-seller-ink">{o.productName}</p>
-                      <p className="text-sm text-seller-muted">Varian: {o.variant}</p>
+                      <p className="text-sm text-seller-muted">{t("seller.variant")}: {o.variant}</p>
                       <p className="text-sm text-seller-muted">
                         {o.qty}x {formatRupiah(o.unitPrice)}
                       </p>
@@ -159,20 +159,20 @@ export default function Orders() {
 
                   <div className="flex w-full items-end justify-between gap-4 border-[#EEF1F6] lg:w-auto lg:flex-col lg:items-end lg:border-l lg:pl-5">
                     <div className="text-right">
-                      <p className="text-xs text-seller-muted">Total Belanja</p>
+                      <p className="text-xs text-seller-muted">{t("admin.totalSpend")}</p>
                       <p className="text-base font-bold text-seller-ink">{formatRupiah(o.total)}</p>
                     </div>
                     <div className="flex gap-2">
                       <button type="button" className="rounded-lg border border-[#E4E8F1] px-4 py-2 text-sm font-semibold text-seller-ink">
-                        Cetak Label
+                        {t("seller.printLabel")}
                       </button>
                       {o.status === "PERLU DIPROSES" ? (
                         <button type="button" className="rounded-lg bg-seller-navy px-4 py-2 text-sm font-semibold text-white">
-                          Proses
+                          {t("admin.process")}
                         </button>
                       ) : (
                         <button type="button" className="rounded-lg bg-[#B45309] px-4 py-2 text-sm font-semibold text-white">
-                          Atur Pick-up
+                          {t("seller.schedulePickup")}
                         </button>
                       )}
                     </div>
@@ -182,7 +182,7 @@ export default function Orders() {
             ))}
           </div>
 
-          <Pagination summary="Menampilkan 1-2 dari 12 pesanan" />
+          <Pagination summary={`${t("seller.showing")} 1-2 ${t("of")} 12 ${t("seller.orders")}`} />
         </div>
       </div>
     </div>

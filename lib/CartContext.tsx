@@ -16,6 +16,7 @@ export type CartItem = {
 
 export type CheckoutDetail = {
   orderId: string;
+  orderDbId?: string | null;
   items: CartItem[];
   subtotal: number;
   shippingFee: number;

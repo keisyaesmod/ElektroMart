@@ -11,6 +11,7 @@ import {
   bestSellerProducts,
   flashSaleProducts,
   heroProducts,
+  uniqueProducts,
   type Product,
 } from "@/lib/data";
 import { slugify } from "@/lib/slugify";
@@ -19,14 +20,7 @@ import { useLanguage } from "@/lib/i18n";
 
 function useAllProducts(): Product[] {
   return useMemo(() => {
-    const map = new Map<string, Product>();
-    [...bestSellerProducts, ...flashSaleProducts, ...heroProducts].forEach(
-      (p) => {
-        const key = p.name.toLowerCase();
-        if (!map.has(key)) map.set(key, p);
-      }
-    );
-    return Array.from(map.values());
+    return uniqueProducts([...bestSellerProducts, ...flashSaleProducts, ...heroProducts]);
   }, []);
 }
 

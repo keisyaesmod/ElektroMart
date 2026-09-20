@@ -24,6 +24,9 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/lib/CartContext";
 import { formatRupiah } from "@/lib/data";
+import { useLanguage } from "@/lib/i18n";
+
+type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 function vaNumber(orderId: string) {
   const digits = orderId.replace(/\D/g, "");
@@ -55,18 +58,24 @@ function bankPrefix(method: string) {
   }
 }
 
-function bankColor(method: string) {
+function paymentLogo(method: string) {
   switch (method) {
     case "BCA Virtual Account":
-      return "#2A74B4";
+      return "/logos/bca.svg";
     case "BNI Virtual Account":
-      return "#F68C22";
+      return "/logos/bni.svg";
     case "BRI Virtual Account":
-      return "#0E56A8";
+      return "/logos/bri.svg";
     case "Mandiri Virtual Account":
-      return "#007A3D";
+      return "/logos/mandiri.svg";
+    case "DANA":
+      return "/logos/dana.svg";
+    case "GoPay":
+      return "/logos/gopay.png";
+    case "OVO":
+      return "/logos/ovo.svg";
     default:
-      return "#334155";
+      return "/logos/qris.svg";
   }
 }
 
@@ -132,56 +141,39 @@ function QrSvg({ seed, className }: { seed: string; className?: string }) {
 
 type BankStep = { title: string; steps: string[] };
 
-function bankSteps(method: string): BankStep[] {
+function bankSteps(method: string, t: Translate): BankStep[] {
   const base = [
     {
-      title: "Cara bayar via Mobile Banking",
+      title: t("pay.mobileBankingTitle"),
       steps: [
-        `Buka aplikasi ${bankPrefix(method)} di HP kamu dan login.`,
-        `Pilih menu "Pembayaran" lalu pilih "Virtual Account" (untuk ${bankPrefix(
-          method
-        )} Internet Banking: pilih menu "Transfer" → "Virtual Account").`,
-        `Masukkan nomor Virtual Account yang sudah kami sediakan, lalu lanjutkan.`,
-        `Periksa kembali detail tagihan (nama, nomor VA, dan nominal) sebelum melanjutkan.`,
-        `Masukkan PIN / gunakan verifikasi biometrik untuk menyelesaikan transaksi.`,
+        t("pay.bankStep1", { bank: bankPrefix(method) }),
+        t("pay.bankStep2", { bank: bankPrefix(method) }),
+        t("pay.bankStep3"),
+        t("pay.bankStep4"),
+        t("pay.bankStep5"),
       ],
     },
     {
-      title: "Cara bayar via ATM",
+      title: t("pay.atmTitle"),
       steps: [
-        `Masukkan kartu ATM ${bankPrefix(method)} dan PIN kamu.`,
-        `Pilih menu "Transaksi Lainnya" → "Pembayaran" → "Virtual Account".`,
-        `Masukkan nomor Virtual Account lalu tekan benar.`,
-        `Periksa data pembayaran, pilih "Ya" untuk melanjutkan, lalu simpan struk sebagai bukti.`,
+        t("pay.atmStep1", { bank: bankPrefix(method) }),
+        t("pay.atmStep2"),
+        t("pay.atmStep3"),
+        t("pay.atmStep4"),
       ],
     },
   ];
   return base;
 }
 
-function eWalletSteps(method: string): string[] {
+function eWalletSteps(method: string, t: Translate): string[] {
   switch (method) {
     case "GoPay":
-      return [
-        "Buka aplikasi Gojek lalu masuk ke menu GoPay.",
-        "Pilih 'Bayar' dan scan kode QR ElektroMart pada halaman ini.",
-        "Periksa jumlah tagihan sebelum mengonfirmasi pembayaran.",
-        "Masukkan PIN GoPay untuk menyelesaikan transaksi.",
-      ];
+      return [t("pay.gopay1"), t("pay.gopay2"), t("pay.gopay3"), t("pay.gopay4")];
     case "OVO":
-      return [
-        "Buka aplikasi OVO lalu pilih 'Scan'.",
-        "Arahkan kamera ke kode QR ElektroMart pada halaman ini.",
-        "Periksa jumlah tagihan sebelum mengonfirmasi pembayaran.",
-        "Masukkan PIN OVO untuk menyelesaikan transaksi.",
-      ];
+      return [t("pay.ovo1"), t("pay.ovo2"), t("pay.ovo3"), t("pay.ovo4")];
     case "DANA":
-      return [
-        "Buka aplikasi DANA lalu pilih ikon 'Scan' di pojok kanan atas.",
-        "Arahkan kamera ke kode QR ElektroMart pada halaman ini.",
-        "Periksa jumlah tagihan sebelum mengonfirmasi pembayaran.",
-        "Masukkan PIN DANA untuk menyelesaikan transaksi.",
-      ];
+      return [t("pay.dana1"), t("pay.dana2"), t("pay.dana3"), t("pay.dana4")];
     default:
       return [];
   }
@@ -190,6 +182,7 @@ function eWalletSteps(method: string): string[] {
 export default function PaymentPage() {
   const router = useRouter();
   const { checkoutDetail, clearCart } = useCart();
+  const { language, t } = useLanguage();
   const [copied, setCopied] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60 * 1000);
 
@@ -220,15 +213,15 @@ export default function PaymentPage() {
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-50">
             <AlertTriangle className="h-10 w-10 text-amber-500" />
           </div>
-          <h1 className="mt-5 text-2xl font-bold text-navy-900">Belum Ada Pesanan</h1>
+          <h1 className="mt-5 text-2xl font-bold text-navy-900">{t("pay.noOrder")}</h1>
           <p className="mt-2 max-w-md text-sm text-slate-500">
-            Halaman ini hanya bisa diakses setelah kamu membuat pesanan di halaman checkout.
+            {t("pay.noOrderDesc")}
           </p>
           <Link
             href="/kategori/semua"
             className="mt-8 rounded-lg bg-brand-blue px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            Mulai Belanja
+            {t("shopNow")}
           </Link>
         </div>
         <Footer />
@@ -271,10 +264,10 @@ export default function PaymentPage() {
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1 text-sm text-slate-500">
           <Link href="/beranda" className="hover:text-navy-900">
-            Beranda
+            {t("home")}
           </Link>
           <ChevronRight className="h-3.5 w-3.5" />
-          <span>Pembayaran</span>
+          <span>{t("pay.payment")}</span>
         </nav>
 
         <div className="mt-4 grid gap-6 lg:grid-cols-2">
@@ -288,12 +281,10 @@ export default function PaymentPage() {
                 </span>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-navy-900">
-                    Menunggu Pembayaran
+                    {t("pay.waiting")}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    Pesanan{" "}
-                    <span className="font-semibold text-navy-900">{detail.orderId}</span>{" "}
-                    akan otomatis dibatalkan jika tidak dibayar dalam 24 jam.
+                    {t("pay.willCancel", { orderId: detail.orderId })}
                   </p>
 
                   {/* Timer */}
@@ -316,15 +307,16 @@ export default function PaymentPage() {
             <div className="rounded-2xl border border-slate-100 bg-white shadow-card">
               <div className="flex items-center gap-2 border-b border-slate-100 bg-[#F4F6FA] px-5 py-3">
                 <CreditCard className="h-4 w-4 text-brand-blue" />
-                <h2 className="text-sm font-semibold text-navy-900">Metode Pembayaran</h2>
+                <h2 className="text-sm font-semibold text-navy-900">{t("pay.method")}</h2>
               </div>
               <div className="p-5">
                 <div className="flex items-center gap-3">
-                  <span
-                    className="flex h-11 w-16 items-center justify-center rounded-lg text-xs font-bold text-white"
-                    style={{ backgroundColor: bankColor(detail.paymentMethod) }}
-                  >
-                    {detail.paymentMethod.split(" ")[0]}
+                  <span className="flex h-11 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1.5">
+                    <img
+                      src={paymentLogo(detail.paymentMethod)}
+                      alt={detail.paymentMethod}
+                      className="h-full w-full object-contain"
+                    />
                   </span>
                   <div>
                     <p className="text-sm font-semibold text-navy-900">
@@ -332,14 +324,14 @@ export default function PaymentPage() {
                     </p>
                     <p className="text-xs text-slate-400">
                       {isBank
-                        ? "Virtual Account"
+                        ? t("pay.virtualAccount")
                         : isQris
-                        ? "Semua aplikasi pembayaran"
-                        : "Dompet digital"}
+                        ? t("pay.allApps")
+                        : t("pay.digitalWallet")}
                     </p>
                   </div>
                   <div className="ml-auto text-right">
-                    <p className="text-xs text-slate-400">Total dibayar</p>
+                    <p className="text-xs text-slate-400">{t("pay.totalPaid")}</p>
                     <p className="text-lg font-bold text-brand-blue">
                       {formatRupiah(detail.total)}
                     </p>
@@ -348,7 +340,7 @@ export default function PaymentPage() {
 
                 {detail.items.length > 0 && (
                   <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-medium text-slate-500">Detail item:</p>
+                    <p className="text-xs font-medium text-slate-500">{t("pay.itemDetail")}</p>
                     {detail.items.map((item) => (
                       <p key={item.id} className="mt-1 text-xs text-navy-900">
                         {item.qty}× {item.name}
@@ -364,15 +356,15 @@ export default function PaymentPage() {
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand-blue">
                 {isBank ? (
                   <>
-                    <Landmark className="h-3.5 w-3.5" /> Nomor Virtual Account
+                    <Landmark className="h-3.5 w-3.5" /> {t("pay.vaNumber")}
                   </>
                 ) : isQris ? (
                   <>
-                    <QrCode className="h-3.5 w-3.5" /> Scan Kode QR
+                    <QrCode className="h-3.5 w-3.5" /> {t("pay.scanQr")}
                   </>
                 ) : (
                   <>
-                    <Smartphone className="h-3.5 w-3.5" /> Kode Pembayaran
+                    <Smartphone className="h-3.5 w-3.5" /> {t("pay.paymentCode")}
                   </>
                 )}
               </p>
@@ -387,7 +379,7 @@ export default function PaymentPage() {
                     className="flex shrink-0 items-center gap-1 rounded-lg bg-brand-blue px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
                   >
                     {copied === "va" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                    {copied === "va" ? "Disalin" : "Salin"}
+                    {copied === "va" ? t("pay.copied") : t("pay.copy")}
                   </button>
                 </div>
               ) : (
@@ -397,12 +389,12 @@ export default function PaymentPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-navy-900">
-                      {isQris ? "QR Code ElektroMart" : `QR ${detail.paymentMethod}`}
+                      {isQris ? t("pay.elektromartQr") : t("pay.qrWithMethod", { method: detail.paymentMethod })}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Buka {isQris ? "aplikasi pembayaran" : "aplikasi"} yang kamu pilih,
-                      lalu pilih <span className="font-semibold">Scan / Bayar</span> untuk
-                      memindai kode di samping.
+                      {t("pay.qrHint", {
+                        app: isQris ? t("pay.paymentApp") : t("pay.app"),
+                      })}
                     </p>
                     <button
                       onClick={() =>
@@ -414,7 +406,7 @@ export default function PaymentPage() {
                       className="mt-3 flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-navy-900 hover:bg-slate-50"
                     >
                       {copied === "qr" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      Salin Kode {code}
+                      {t("pay.copyCode", { code })}
                     </button>
                   </div>
                 </div>
@@ -422,14 +414,15 @@ export default function PaymentPage() {
 
               <p className="mt-4 flex items-start gap-1.5 text-xs text-slate-500">
                 <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                Berlaku hingga {new Date(detail.expiresAt).toLocaleString("id-ID", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
+                {t("pay.validUntil", {
+                  date: new Date(detail.expiresAt).toLocaleString(language === "id" ? "id-ID" : "en-US", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
                 })}
-                . Jangan berikan kode ini kepada siapa pun.
               </p>
             </div>
 
@@ -439,9 +432,7 @@ export default function PaymentPage() {
                 <HelpCircle className="h-5 w-5" />
               </span>
               <p className="text-xs text-slate-500">
-                Mengalami kendala saat pembayaran? Hubungi CS kami di{" "}
-                <span className="font-semibold text-navy-900">0800-1-ELEKTROMART</span> atau email{" "}
-                <span className="font-semibold text-navy-900">esmodkeisya@gmail.com</span>
+                {t("pay.needHelp")}
               </p>
             </div>
           </div>
@@ -450,22 +441,21 @@ export default function PaymentPage() {
           <div className="space-y-5">
             {/* Tombol bayar */}
             <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-card">
-              <h2 className="text-base font-bold text-navy-900">Sudah Melakukan Pembayaran?</h2>
+              <h2 className="text-base font-bold text-navy-900">{t("pay.alreadyPaidTitle")}</h2>
               <p className="mt-1 text-xs text-slate-500">
-                Setelah pembayaran kami terima, status pesanan akan otomatis diperbarui. Klik
-                tombol di bawah jika kamu sudah membayar.
+                {t("pay.alreadyPaidDesc")}
               </p>
               <button
                 onClick={handlePaid}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-6 py-3.5 text-sm font-semibold text-white hover:bg-emerald-700"
               >
-                <CheckCircle2 className="h-4 w-4" /> Ya, Saya Sudah Bayar
+                <CheckCircle2 className="h-4 w-4" /> {t("pay.yesPaid")}
               </button>
               <Link
                 href="/bantuan"
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-6 py-3 text-sm font-semibold text-navy-900 hover:bg-slate-50"
               >
-                Butuh Bantuan? Hubungi CS
+                {t("pay.needCs")}
               </Link>
             </div>
 
@@ -473,13 +463,13 @@ export default function PaymentPage() {
             <div className="rounded-2xl border border-slate-100 bg-white shadow-card">
               <div className="border-b border-slate-100 bg-[#F4F6FA] px-5 py-3">
                 <p className="text-sm font-semibold text-navy-900">
-                  {isBank ? "Cara Pembayaran" : isQris ? "Instruksi Pembayaran" : "Cara Pembayaran"}
+                  {isQris ? t("pay.instructions") : t("pay.howToPay")}
                 </p>
               </div>
               <div className="p-5">
                 {isBank ? (
                   <div className="space-y-4">
-                    {bankSteps(detail.paymentMethod).map((section, i) => (
+                    {bankSteps(detail.paymentMethod, t).map((section, i) => (
                       <div key={i}>
                         <p className="text-xs font-bold uppercase tracking-wide text-brand-blue">
                           {section.title}
@@ -503,10 +493,10 @@ export default function PaymentPage() {
                 ) : isQris ? (
                   <ol className="space-y-2.5">
                     {[
-                      "Buka aplikasi pembayaran yang kamu gunakan (GoPay, OVO, DANA, Bank, dll).",
-                      "Pilih menu Scan / QRIS, lalu arahkan kamera ke kode QR ElektroMart.",
-                      "Periksa detail dan nominal pembayaran sebelum mengonfirmasi.",
-                      "Setelah berhasil, kembali ke halaman ini dan klik 'Ya, Saya Sudah Bayar'.",
+                      t("pay.qris1"),
+                      t("pay.qris2"),
+                      t("pay.qris3"),
+                      t("pay.qris4"),
                     ].map((step, j) => (
                       <li key={j} className="flex items-start gap-2.5 text-sm text-slate-600">
                         <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-50 text-[10px] font-bold text-red-600">
@@ -518,7 +508,7 @@ export default function PaymentPage() {
                   </ol>
                 ) : (
                   <ol className="space-y-2.5">
-                    {eWalletSteps(detail.paymentMethod).map((step, j) => (
+                    {eWalletSteps(detail.paymentMethod, t).map((step, j) => (
                       <li key={j} className="flex items-start gap-2.5 text-sm text-slate-600">
                         <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[10px] font-bold text-brand-blue">
                           {j + 1}
@@ -534,33 +524,33 @@ export default function PaymentPage() {
             {/* Detail pesanan */}
             <div className="rounded-2xl border border-slate-100 bg-white shadow-card">
               <div className="border-b border-slate-100 bg-[#F4F6FA] px-5 py-3">
-                <p className="text-sm font-semibold text-navy-900">Detail Pesanan</p>
+                <p className="text-sm font-semibold text-navy-900">{t("pay.orderDetail")}</p>
               </div>
               <div className="space-y-3 p-5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">No. Pesanan</span>
+                  <span className="text-slate-500">{t("pay.orderNo")}</span>
                   <span className="font-semibold text-navy-900">{detail.orderId}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Subtotal</span>
+                  <span className="text-slate-500">{t("pay.subtotal")}</span>
                   <span className="font-medium text-navy-900">
                     {formatRupiah(detail.subtotal)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Ongkir</span>
+                  <span className="text-slate-500">{t("pay.shipping")}</span>
                   <span className="font-medium text-navy-900">
                     {detail.shippingFee > 0 ? formatRupiah(detail.shippingFee) : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Asuransi pengiriman</span>
+                  <span className="text-slate-500">{t("pay.shippingInsurance")}</span>
                   <span className="font-medium text-navy-900">
                     {formatRupiah(detail.insuranceFee)}
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-slate-100 pt-3">
-                  <span className="font-semibold text-navy-900">Total Pembayaran</span>
+                  <span className="font-semibold text-navy-900">{t("pay.totalPayment")}</span>
                   <span className="text-lg font-bold text-brand-blue">
                     {formatRupiah(detail.total)}
                   </span>
@@ -571,16 +561,20 @@ export default function PaymentPage() {
                     <Tag className="h-3.5 w-3.5" /> {detail.courier}
                   </div>
                   <p className="leading-relaxed text-slate-500">
-                    Dikirim ke: <span className="font-medium text-navy-900">{detail.address}</span>
+                    {t("pay.shippedTo")} <span className="font-medium text-navy-900">{detail.address}</span>
                   </p>
                   <div className="flex items-start gap-2 text-slate-500">
-                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-600">
-                      {detail.paymentMethod.split(" ")[0]}
+                    <span className="mt-0.5 flex h-9 w-12 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1">
+                      <img
+                        src={paymentLogo(detail.paymentMethod)}
+                        alt={detail.paymentMethod}
+                        className="h-full w-full object-contain"
+                      />
                     </span>
                     <div>
                       <p className="font-medium text-navy-900">{detail.paymentMethod}</p>
                       <p className="text-xs text-slate-400">
-                        {isBank ? `VA: ${va}` : isQris ? "QRIS" : `Kode: ${code}`}
+                        {isBank ? t("pay.vaShort", { code: va }) : isQris ? "QRIS" : t("pay.codeShort", { code })}
                       </p>
                     </div>
                   </div>
@@ -591,9 +585,7 @@ export default function PaymentPage() {
             <div className="flex items-start gap-2.5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs text-amber-700">
               <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                Pesanan yang tidak dibayar dalam 24 jam akan otomatis dibatalkan dan biaya
-                tidak akan dipotong. Hubungi CS jika pembayaran sudah dilakukan lebih dari 24
-                jam namun status belum berubah.
+                {t("pay.cancelWarning")}
               </p>
             </div>
           </div>

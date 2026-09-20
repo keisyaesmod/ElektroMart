@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -22,58 +22,68 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart, type CheckoutDetail } from "@/lib/CartContext";
 import { formatRupiah } from "@/lib/data";
+import { api, PROVINCES, type OrderRecord, type ShippingAddress } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 
 type Courier = {
   name: string;
   eta: string;
   price: number;
   logo: string;
+  badgeKey?: string | null;
 };
 
-const couriers: Courier[] = [
-  { name: "JNE Reguler", eta: "2-3 hari", price: 25000, logo: "JNE" },
-  { name: "J&T Express", eta: "2-3 hari", price: 22000, logo: "J&T" },
-  { name: "SiCepat REG", eta: "1-2 hari", price: 26000, logo: "SiCepat" },
-  { name: "AnterAja", eta: "2-3 hari", price: 21000, logo: "AnterAja" },
-  { name: "GoSend Same Day", eta: "Hari ini", price: 35000, logo: "GoSend" },
-];
-
-const paymentGroups = [
-  {
-    group: "bank" as const,
-    title: "Transfer Bank",
-    note: "Bayar lewat aplikasi mobile banking / internet banking",
-    icon: Landmark,
-    methods: [
-      { name: "BCA Virtual Account", short: "BCA" },
-      { name: "BNI Virtual Account", short: "BNI" },
-      { name: "BRI Virtual Account", short: "BRI" },
-      { name: "Mandiri Virtual Account", short: "Mandiri" },
-    ],
-  },
-  {
-    group: "ewallet" as const,
-    title: "E-Wallet",
-    note: "Bayar langsung dari aplikasi dompet digital",
-    icon: Wallet,
-    methods: [
-      { name: "DANA", short: "DANA" },
-      { name: "GoPay", short: "GoPay" },
-      { name: "OVO", short: "OVO" },
-    ],
-  },
-  {
-    group: "qris" as const,
-    title: "QRIS",
-    note: "Scan sekali untuk semua aplikasi pembayaran",
-    icon: QrCode,
-    methods: [{ name: "QRIS", short: "QRIS" }],
-  },
+const courierDefs = [
+  { name: "JNE Reguler", etaKey: "checkout.etaDays", price: 25000, logo: "/logos/jne.png", badgeKey: "checkout.badgePopular" },
+  { name: "J&T Express", etaKey: "checkout.etaDays", price: 22000, logo: "/logos/jnt.svg", badgeKey: null },
+  { name: "SiCepat REG", etaKey: "checkout.etaFast", price: 26000, logo: "/logos/sicepat.png", badgeKey: null },
+  { name: "AnterAja", etaKey: "checkout.etaDays", price: 21000, logo: "/logos/anteraja.jpg", badgeKey: "checkout.badgeCheapest" },
+  { name: "GoSend Same Day", etaKey: "checkout.etaToday", price: 35000, logo: "/logos/gosend.png", badgeKey: null },
 ];
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, clearCart, setCheckoutDetail } = useCart();
+  const { t } = useLanguage();
+  const { items, subtotal, setCheckoutDetail } = useCart();
+  const paymentGroups = [
+    {
+      group: "bank" as const,
+      title: t("checkout.bankTransfer"),
+      note: t("checkout.bankNote"),
+      icon: Landmark,
+      methods: [
+        { name: "BCA Virtual Account", short: "BCA", logo: "/logos/bca.svg", badgeKey: null },
+        { name: "BNI Virtual Account", short: "BNI", logo: "/logos/bni.svg", badgeKey: null },
+        { name: "BRI Virtual Account", short: "BRI", logo: "/logos/bri.svg", badgeKey: null },
+        { name: "Mandiri Virtual Account", short: "Mandiri", logo: "/logos/mandiri.svg", badgeKey: null },
+      ],
+    },
+    {
+      group: "ewallet" as const,
+      title: t("checkout.ewallet"),
+      note: t("checkout.ewalletNote"),
+      icon: Wallet,
+      methods: [
+        { name: "DANA", short: "DANA", logo: "/logos/dana.svg", badgeKey: null },
+        { name: "GoPay", short: "GoPay", logo: "/logos/gopay.png", badgeKey: null },
+        { name: "OVO", short: "OVO", logo: "/logos/ovo.svg", badgeKey: null },
+      ],
+    },
+    {
+      group: "qris" as const,
+      title: "QRIS",
+      note: t("checkout.qrisNote"),
+      icon: QrCode,
+      methods: [{ name: "QRIS", short: "QRIS", logo: "/logos/qris.svg", badgeKey: "checkout.badgePopular" }],
+    },
+  ];
+  const couriers: Courier[] = courierDefs.map((c) => ({
+    name: c.name,
+    eta: t(c.etaKey),
+    price: c.price,
+    logo: c.logo,
+    badgeKey: c.badgeKey ? t(c.badgeKey) : null,
+  }));
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -90,6 +100,26 @@ export default function CheckoutPage() {
   const [checked, setChecked] = useState(false);
   const [agree, setAgree] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<ShippingAddress[]>([]);
+
+  useEffect(() => {
+    void api<{ addresses: ShippingAddress[] }>("/api/addresses")
+      .then((data) => {
+        const list = data.addresses || [];
+        setSavedAddresses(list);
+        const primary = list.find((a) => a.is_default) || list[0];
+        if (primary) {
+          setName(primary.recipient);
+          setPhone(primary.phone || "");
+          setAddress(primary.address);
+          setCity(primary.city);
+          setProvince(primary.province);
+          setPostal(primary.postal || "");
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   const productFee = items.reduce((acc, i) => acc + Math.round(i.price * 0.014), 0);
   const insuranceFee = items.reduce((acc, i) => acc + Math.min(5000, Math.max(2000, Math.round(i.price * i.qty * 0.002))), 0);
@@ -110,15 +140,15 @@ export default function CheckoutPage() {
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-50">
             <AlertTriangle className="h-10 w-10 text-amber-500" />
           </div>
-          <h1 className="mt-5 text-2xl font-bold text-navy-900">Keranjang Masih Kosong</h1>
+          <h1 className="mt-5 text-2xl font-bold text-navy-900">{t("checkout.emptyCartTitle")}</h1>
           <p className="mt-2 max-w-md text-sm text-slate-500">
-            Tambahkan produk dulu ke keranjang sebelum melanjutkan ke pembayaran.
+            {t("checkout.emptyCartDesc")}
           </p>
           <Link
             href="/kategori/semua"
             className="mt-8 rounded-lg bg-brand-blue px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            Mulai Belanja
+            {t("cart.startShopping")}
           </Link>
         </div>
         <Footer />
@@ -126,47 +156,83 @@ export default function CheckoutPage() {
     );
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (!name.trim() || !phone.trim() || !address.trim() || !city.trim()) {
-      setError("Lengkapi dulu alamat pengiriman (nama, telepon, alamat, dan kota).");
+      setError(t("checkout.errorAddress"));
       return;
     }
     if (!selectedCourier) {
-      setError("Pilih jasa pengiriman terlebih dahulu.");
+      setError(t("checkout.errorCourier"));
       return;
     }
     if (!checked) {
-      setError("Pilih metode pembayaran terlebih dahulu.");
+      setError(t("checkout.errorPayment"));
       return;
     }
     if (!agree) {
-      setError("Centang persetujuan memori transaksi terlebih dahulu.");
+      setError(t("checkout.errorAgree"));
       return;
     }
 
-    const orderId = "EM-" + Date.now().toString().slice(-9);
-    const detail: CheckoutDetail = {
-      orderId,
-      items,
-      subtotal,
-      shippingFee,
-      insuranceFee,
-      total,
-      paymentMethod: activePayment.name,
-      paymentGroup,
-      courier: selectedCourier.name,
-      address: `${address}, ${city}, ${province} ${postal}`,
-      city,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      status: "MENUNGGU PEMBAYARAN",
-    };
+    setSubmitting(true);
+    try {
+      const { order } = await api<{ order: OrderRecord }>("/api/orders", {
+        method: "POST",
+        body: JSON.stringify({
+          items: items.map((i) => ({
+            product_id: i.id,
+            product_name: i.name,
+            product_image: i.image,
+            price: i.price,
+            qty: i.qty,
+          })),
+          subtotal,
+          product_fee: productFee,
+          insurance_fee: insuranceFee,
+          shipping_fee: shippingFee,
+          total,
+          courier: selectedCourier.name,
+          payment_method: activePayment.name,
+          payment_group: paymentGroup,
+          address: {
+            recipient: name,
+            phone,
+            address,
+            city,
+            province,
+            postal,
+          },
+        }),
+      });
 
-    setCheckoutDetail(detail);
-    router.push("/pembayaran");
+      const detail: CheckoutDetail = {
+        orderId: order.order_number,
+        orderDbId: order.id,
+        items,
+        subtotal,
+        shippingFee,
+        insuranceFee,
+        total,
+        paymentMethod: activePayment.name,
+        paymentGroup,
+        courier: selectedCourier.name,
+        address: `${address}, ${city}, ${province} ${postal}`,
+        city,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+        status: "MENUNGGU PEMBAYARAN",
+      };
+
+      setCheckoutDetail(detail);
+      router.push("/pembayaran");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("checkout.errorCreateOrder"));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -176,37 +242,61 @@ export default function CheckoutPage() {
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Stepper */}
         <div className="flex items-center gap-2 text-sm">
-          <StepDone label="Keranjang" />
+          <StepDone label={t("checkout.stepCart")} />
           <ChevronRight className="h-4 w-4 text-slate-300" />
-          <StepActive label="Checkout" current={2} total={3} />
+          <StepActive label={t("checkout.stepCheckout")} current={2} total={3} />
           <ChevronRight className="h-4 w-4 text-slate-300" />
-          <StepPending label="Pembayaran" />
+          <StepPending label={t("checkout.stepPayment")} />
           <ChevronRight className="h-4 w-4 text-slate-300" />
-          <StepPending label="Selesai" />
+          <StepPending label={t("checkout.stepDone")} />
         </div>
 
-        <h1 className="mt-4 text-2xl font-bold text-navy-900">Checkout</h1>
+        <h1 className="mt-4 text-2xl font-bold text-navy-900">{t("checkout.stepCheckout")}</h1>
 
         <form onSubmit={handleSubmit} className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-5">
-            {/* 1. Alamat pengiriman */}
+            {/* 1. Shipping address */}
             <section className="rounded-2xl border border-slate-100 bg-white shadow-card">
               <header className="flex items-center gap-2 border-b border-slate-100 bg-[#F4F6FA] px-5 py-3">
                 <MapPin className="h-4 w-4 text-brand-blue" />
-                <h2 className="text-sm font-semibold text-navy-900">1. Alamat Pengiriman</h2>
+                <h2 className="text-sm font-semibold text-navy-900">{t("checkout.shippingAddress")}</h2>
               </header>
               <div className="p-5">
+                {savedAddresses.length > 0 ? (
+                  <div className="mb-4">
+                    <p className="mb-2 text-xs font-medium text-slate-600">{t("checkout.savedAddresses")}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {savedAddresses.map((addr) => (
+                        <button
+                          key={addr.id}
+                          type="button"
+                          onClick={() => {
+                            setName(addr.recipient);
+                            setPhone(addr.phone || "");
+                            setAddress(addr.address);
+                            setCity(addr.city);
+                            setProvince(addr.province);
+                            setPostal(addr.postal || "");
+                          }}
+                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-navy-900 hover:border-brand-blue"
+                        >
+                          {addr.recipient} · {addr.city}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Nama Penerima">
+                  <Field label={t("checkout.recipientName")}>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Nama lengkap"
+                      placeholder={t("checkout.fullNamePlaceholder")}
                       className="input-em"
                     />
                   </Field>
-                  <Field label="No. Telepon / HP">
+                  <Field label={t("checkout.phoneLabel")}>
                     <input
                       type="tel"
                       value={phone}
@@ -216,37 +306,37 @@ export default function CheckoutPage() {
                     />
                   </Field>
                   <div className="sm:col-span-2">
-                    <Field label="Alamat Lengkap">
+                    <Field label={t("profile.fullAddress")}>
                       <textarea
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan, kecamatan"
+                        placeholder={t("profile.fullAddressPlaceholder")}
                         rows={2}
                         className="input-em resize-none"
                       />
                     </Field>
                   </div>
-                  <Field label="Kota/Kabupaten">
+                  <Field label={t("profile.city")}>
                     <input
                       type="text"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      placeholder="Contoh: Surabaya"
+                      placeholder={t("profile.cityPlaceholder")}
                       className="input-em"
                     />
                   </Field>
-                  <Field label="Provinsi">
+                  <Field label={t("profile.province")}>
                     <select
                       value={province}
                       onChange={(e) => setProvince(e.target.value)}
                       className="input-em"
                     >
-                      {["Jawa Timur", "Jawa Barat", "Jawa Tengah", "DKI Jakarta", "Banten", "DI Yogyakarta", "Bali", "Sumatera Utara", "Riau", "Kalimantan Timur", "Sulawesi Selatan", "Papua"].map((p) => (
+                      {PROVINCES.map((p) => (
                         <option key={p}>{p}</option>
                       ))}
                     </select>
                   </Field>
-                  <Field label="Kode Pos">
+                  <Field label={t("profile.postalCode")}>
                     <input
                       type="text"
                       value={postal}
@@ -255,12 +345,12 @@ export default function CheckoutPage() {
                       className="input-em"
                     />
                   </Field>
-                  <Field label="Catatan untuk Kurir (opsional)">
+                  <Field label={t("checkout.courierNotes")}>
                     <input
                       type="text"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Contoh: Titip ke satpam"
+                      placeholder={t("checkout.courierNotesPlaceholder")}
                       className="input-em"
                     />
                   </Field>
@@ -274,17 +364,17 @@ export default function CheckoutPage() {
                     className="h-4 w-4 rounded border-slate-300 accent-brand-blue"
                   />
                   <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-brand-blue" /> Gunakan lokasi saya saat ini
+                    <MapPin className="h-3.5 w-3.5 text-brand-blue" /> {t("checkout.useCurrentLocation")}
                   </span>
                 </label>
               </div>
             </section>
 
-            {/* 2. Jasa pengiriman */}
+            {/* 2. Shipping service */}
             <section className="rounded-2xl border border-slate-100 bg-white shadow-card">
               <header className="flex items-center gap-2 border-b border-slate-100 bg-[#F4F6FA] px-5 py-3">
                 <Truck className="h-4 w-4 text-brand-blue" />
-                <h2 className="text-sm font-semibold text-navy-900">2. Jasa Pengiriman</h2>
+                <h2 className="text-sm font-semibold text-navy-900">{t("checkout.shippingService")}</h2>
               </header>
               <div className="p-5">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -295,29 +385,40 @@ export default function CheckoutPage() {
                         key={courier.name}
                         type="button"
                         onClick={() => setSelectedCourier(courier)}
-                        className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-colors ${
+                        className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
                           active
-                            ? "border-brand-blue bg-blue-50/60"
-                            : "border-slate-200 hover:border-slate-300"
+                            ? "border-brand-blue bg-blue-50/60 ring-1 ring-brand-blue"
+                            : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
                         }`}
                       >
                         <span
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold ${
-                            active ? "bg-brand-blue text-white" : "bg-slate-100 text-slate-600"
+                          className={`flex h-11 w-14 shrink-0 items-center justify-center rounded-lg border bg-white p-1 ${
+                            active ? "border-brand-blue/40" : "border-slate-200"
                           }`}
                         >
-                          {courier.logo}
+                          <img src={courier.logo} alt={courier.name} className="h-full w-full object-contain" />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-semibold text-navy-900">
                             {courier.name}
                           </span>
-                          <span className="block text-xs text-slate-400">{courier.eta}</span>
+                          <span className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                            <Clock className="h-3 w-3" /> {courier.eta}
+                          </span>
                         </span>
-                        <span className="text-sm font-semibold text-navy-900">
-                          {formatRupiah(courier.price)}
+                        <span className="flex flex-col items-end gap-1">
+                          <span className="flex items-center gap-1">
+                            <span className="text-sm font-bold text-navy-900">
+                              {formatRupiah(courier.price)}
+                            </span>
+                            {active && <CheckCircle2 className="h-4 w-4 shrink-0 text-brand-blue" />}
+                          </span>
+                          {courier.badgeKey && (
+                            <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-amber-700">
+                              {courier.badgeKey}
+                            </span>
+                          )}
                         </span>
-                        {active && <CheckCircle2 className="h-4 w-4 shrink-0 text-brand-blue" />}
                       </button>
                     );
                   })}
@@ -325,11 +426,11 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            {/* 3. Metode pembayaran */}
+            {/* 3. Payment method */}
             <section className="rounded-2xl border border-slate-100 bg-white shadow-card">
               <header className="flex items-center gap-2 border-b border-slate-100 bg-[#F4F6FA] px-5 py-3">
                 <CreditCard className="h-4 w-4 text-brand-blue" />
-                <h2 className="text-sm font-semibold text-navy-900">3. Metode Pembayaran</h2>
+                <h2 className="text-sm font-semibold text-navy-900">{t("checkout.paymentMethod")}</h2>
               </header>
               <div className="p-5">
                 <div className="flex flex-wrap gap-2">
@@ -358,7 +459,7 @@ export default function CheckoutPage() {
                   })}
                 </div>
 
-                {/* Daftar metode */}
+                {/* Method list */}
                 <div className="mt-4 space-y-2.5">
                   {paymentGroups
                     .find((g) => g.group === paymentGroup)
@@ -372,32 +473,35 @@ export default function CheckoutPage() {
                             setSelectedMethod(m.name);
                             setChecked(true);
                           }}
-                          className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-colors ${
+                          className={`flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition-all ${
                             active
-                              ? "border-brand-blue bg-blue-50/60"
-                              : "border-slate-200 hover:border-slate-300"
+                              ? "border-brand-blue bg-blue-50/60 ring-1 ring-brand-blue"
+                              : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
                           }`}
                         >
                           <span
-                            className={`flex h-10 w-14 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white ${
-                              m.short === "QRIS"
-                                ? "bg-red-600"
-                                : m.short === "GoPay"
-                                ? "bg-blue-600"
-                                : m.short === "OVO"
-                                ? "bg-purple-600"
-                                : paymentGroup === "ewallet"
-                                ? "bg-blue-500"
-                                : "bg-navy-800"
+                            className={`flex h-11 w-16 shrink-0 items-center justify-center rounded-lg border bg-white p-1.5 ${
+                              active ? "border-brand-blue/40" : "border-slate-200"
                             }`}
                           >
-                            {m.short}
+                            <img src={m.logo} alt={m.name} className="h-full w-full object-contain" />
                           </span>
-                          <span className="flex-1 text-sm font-semibold text-navy-900">
-                            {m.name}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-navy-900">
+                              {m.name}
+                            </span>
+                            <span
+                              className={`block text-[11px] ${
+                                m.badgeKey ? "text-amber-700" : "text-slate-400"
+                              }`}
+                            >
+                              {m.badgeKey
+                                ? m.badgeKey
+                                : paymentGroups.find((g) => g.group === paymentGroup)?.title}
+                            </span>
                           </span>
                           {checked && selectedMethod === m.name && (
-                            <CheckCircle2 className="h-5 w-5 text-brand-blue" />
+                            <CheckCircle2 className="h-5 w-5 shrink-0 text-brand-blue" />
                           )}
                         </button>
                       );
@@ -421,11 +525,7 @@ export default function CheckoutPage() {
                   className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-brand-blue"
                 />
                 <span>
-                  Saya menyetujui{" "}
-                  <span className="font-semibold text-brand-blue">Syarat &amp; Ketentuan</span> dan{" "}
-                  <span className="font-semibold text-brand-blue">Kebijakan Privasi</span> ElektroMart,
-                  menyetujui kebijakan pengembalian dananya, serta memahami bahwa pembayaran ditahan
-                  oleh ElektroMart hingga pesanan selesai.
+                  {t("checkout.agreeText")}
                 </span>
               </label>
             </section>
@@ -441,7 +541,7 @@ export default function CheckoutPage() {
           <div>
             <div className="sticky top-20 rounded-2xl border border-slate-100 bg-white shadow-card">
               <div className="border-b border-slate-100 bg-[#F4F6FA] px-5 py-3">
-                <p className="text-sm font-semibold text-navy-900">Ringkasan Pesanan</p>
+                <p className="text-sm font-semibold text-navy-900">{t("checkout.orderSummary")}</p>
               </div>
 
               <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 px-5">
@@ -471,19 +571,19 @@ export default function CheckoutPage() {
               </div>
 
               <div className="border-t border-slate-100 px-5 pt-4 text-sm">
-                <SummaryRow label="Subtotal" value={formatRupiah(subtotal)} />
-                <SummaryRow label="Biaya layanan produk" value={formatRupiah(productFee)} />
-                <SummaryRow label="Asuransi pengiriman" value={formatRupiah(insuranceFee)} />
+                <SummaryRow label={t("pay.subtotal")} value={formatRupiah(subtotal)} />
+                <SummaryRow label={t("cart.productServiceFee")} value={formatRupiah(productFee)} />
+                <SummaryRow label={t("checkout.insurance")} value={formatRupiah(insuranceFee)} />
                 <SummaryRow
-                  label="Ongkir"
+                  label={t("cart.shipping")}
                   value={
                     selectedCourier ? formatRupiah(shippingFee) : <span className="text-slate-300">-</span>
                   }
                 />
                 <div className="mt-3 flex items-start justify-between border-t border-slate-100 pt-3">
                   <div>
-                    <p className="text-sm font-semibold text-navy-900">Total Tagihan</p>
-                    <p className="text-xs text-slate-400">Sudah termasuk biaya layanan</p>
+                    <p className="text-sm font-semibold text-navy-900">{t("checkout.billTotal")}</p>
+                    <p className="text-xs text-slate-400">{t("checkout.includesService")}</p>
                   </div>
                   <p className="text-xl font-bold text-brand-blue">{formatRupiah(total)}</p>
                 </div>
@@ -492,21 +592,22 @@ export default function CheckoutPage() {
               <div className="p-5 pt-4">
                 <button
                   type="submit"
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-blue px-6 py-3.5 text-sm font-semibold text-white hover:bg-blue-700"
+                  disabled={submitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-blue px-6 py-3.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                 >
-                  Buat Pesanan <ChevronRight className="h-4 w-4" />
+                  {submitting ? t("checkout.creating") : t("checkout.createOrder")} <ChevronRight className="h-4 w-4" />
                 </button>
                 <Link
                   href="/keranjang"
                   className="mt-3 block text-center text-xs font-medium text-slate-400 hover:text-brand-blue"
                 >
-                  &larr; Kembali ke keranjang
+                  &larr; {t("checkout.backToCart")}
                 </Link>
                 <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-                  <Clock className="h-3.5 w-3.5" /> Pesanan harus dibayar dalam 24 jam
+                  <Clock className="h-3.5 w-3.5" /> {t("checkout.payIn24h")}
                 </div>
                 <div className="mt-1 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-                  <Package className="h-3.5 w-3.5" /> Dikirim dari Jakarta, Indonesia
+                  <Package className="h-3.5 w-3.5" /> {t("checkout.shipFromJakarta")}
                 </div>
               </div>
             </div>

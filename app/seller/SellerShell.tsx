@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Inter } from "next/font/google";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { CircleHelp, LayoutGrid, Home, Package, ShoppingCart, Wallet } from "lucide-react";
+import { CircleHelp, LayoutGrid, Home, Package, ShoppingCart, Wallet, Flag, MessageCircle } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -13,6 +13,8 @@ const navigation = [
   { href: "/seller/dashboard", labelKey: "home", icon: LayoutGrid },
   { href: "/seller/produk", labelKey: "products", icon: Package },
   { href: "/seller/pesanan", labelKey: "admin.orders", icon: ShoppingCart },
+  { href: "/seller/chat", labelKey: "chat.messages", icon: MessageCircle },
+  { href: "/seller/laporan", labelKey: "report.notifications", icon: Flag },
   { href: "/seller/finance", labelKey: "seller.finance", icon: Wallet },
 ];
 
@@ -25,7 +27,7 @@ export default function SellerShell({ children }: { children: ReactNode }) {
       <aside className="hidden h-full w-[240px] shrink-0 flex-col bg-seller-navy px-4 py-6 text-white md:flex">
         <Link href="/seller/dashboard" className="mb-10 block px-3">
           <span className="block text-[20px] font-bold leading-tight tracking-tight">ElektroMart</span>
-          <span className="mt-1 block text-[12px] font-medium text-white/55">Seller Central</span>
+          <span className="mt-1 block text-[12px] font-medium text-white/55">{t("seller.sellerCentral")}</span>
         </Link>
         <nav className="space-y-1">
           {navigation.map((item) => {

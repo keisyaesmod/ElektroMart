@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Heart, ShoppingCart, Menu, X, Globe, ChevronDown, UserCircle, LayoutGrid, User as UserIcon } from "lucide-react";
+import { Search, MessageCircle, ShoppingCart, Menu, X, Globe, ChevronDown, UserCircle, LayoutGrid, User as UserIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/i18n";
 import { useCart } from "@/lib/CartContext";
@@ -150,14 +150,9 @@ export default function Navbar() {
                   <UserIcon className="h-4 w-4 text-navy-700" /> {t("profile")}
                 </Link>
               ) : (
-                <>
-                  <Link href={accountHref} onClick={() => setProfileOpen(false)} className="flex items-center gap-2 rounded px-3 py-2 hover:bg-slate-100">
-                    <LayoutGrid className="h-4 w-4 text-navy-700" /> {t("dashboard")}
-                  </Link>
-                  <Link href="/profil" onClick={() => setProfileOpen(false)} className="flex items-center gap-2 rounded px-3 py-2 hover:bg-slate-100">
-                    <UserIcon className="h-4 w-4 text-navy-700" /> {t("profile")}
-                  </Link>
-                </>
+                <Link href={accountHref} onClick={() => setProfileOpen(false)} className="flex items-center gap-2 rounded px-3 py-2 hover:bg-slate-100">
+                  <LayoutGrid className="h-4 w-4 text-navy-700" /> {t("dashboard")}
+                </Link>
               )}
               <button type="button" onClick={logout} className="w-full rounded px-3 py-2 text-left hover:bg-slate-100">{t("logout")}</button>
             </div> : null}
@@ -165,12 +160,13 @@ export default function Navbar() {
             <Link href="/login" className="hidden text-sm font-semibold text-white sm:block">{t("login")}</Link>
             <Link href="/register-pembeli" className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-navy-900 hover:bg-slate-100">{t("register")}</Link>
           </>}
-          <button
-            aria-label="Wishlist"
+          <Link
+            href="/chat"
+            aria-label="Chat"
             className="hidden h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10 sm:flex"
           >
-            <Heart className="h-5 w-5" />
-          </button>
+            <MessageCircle className="h-5 w-5" />
+          </Link>
           <Link
             href="/keranjang"
             aria-label={t("cart")}
@@ -230,14 +226,9 @@ export default function Navbar() {
                   <UserIcon className="h-4 w-4" /> {t("profile")}
                 </Link>
               ) : (
-                <>
-                  <Link href={accountHref} onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-2 py-2.5 hover:bg-white/10 hover:text-white">
-                    <LayoutGrid className="h-4 w-4" /> {t("dashboard")}
-                  </Link>
-                  <Link href="/profil" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-2 py-2.5 hover:bg-white/10 hover:text-white">
-                    <UserIcon className="h-4 w-4" /> {t("profile")}
-                  </Link>
-                </>
+                <Link href={accountHref} onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-2 py-2.5 hover:bg-white/10 hover:text-white">
+                  <LayoutGrid className="h-4 w-4" /> {t("dashboard")}
+                </Link>
               )}
               <button type="button" onClick={() => { void logout(); setMenuOpen(false); }} className="rounded-lg px-2 py-2.5 text-left hover:bg-white/10 hover:text-white">{t("logout")}</button>
             </> : <Link href="/login" onClick={() => setMenuOpen(false)} className="rounded-lg px-2 py-2.5 hover:bg-white/10 hover:text-white">{t("login")}</Link>}

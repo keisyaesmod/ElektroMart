@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, TrendingUp } from "lucide-react";
-import { bestSellerProducts } from "@/lib/data";
+import { bestSellerProducts, uniqueProducts } from "@/lib/data";
 import { BestSellerCard } from "@/components/produk/ProductCard";
 import { useLanguage } from "@/lib/i18n";
 
@@ -29,7 +29,7 @@ export default function BestSellers() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        {bestSellerProducts.slice(0, 6).map((product) => (
+        {uniqueProducts(bestSellerProducts).slice(0, 6).map((product) => (
           <BestSellerCard key={product.id} product={product} />
         ))}
       </div>

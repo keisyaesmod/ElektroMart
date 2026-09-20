@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Smartphone,
   Laptop,
@@ -13,9 +14,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { categories } from "@/lib/data";
+import { categories as fallbackCategories } from "@/lib/data";
 import { slugify } from "@/lib/slugify";
 import { useLanguage } from "@/lib/i18n";
+import { api, type CategoryRecord } from "@/lib/api";
 
 const iconMap: Record<string, LucideIcon> = {
   Smartphone,
@@ -41,6 +43,22 @@ const colorMap: Record<string, string> = {
 
 export default function Categories() {
   const { t } = useLanguage();
+  const [categories, setCategories] = useState(fallbackCategories);
+
+  useEffect(() => {
+    void api<{ categories: CategoryRecord[] }>("/api/categories")
+      .then((data) => {
+        if (!data.categories?.length) return;
+        setCategories(
+          data.categories.map((category) => ({
+            id: category.id,
+            name: category.name,
+            icon: category.icon || "Smartphone",
+          })),
+        );
+      })
+      .catch(() => undefined);
+  }, []);
   return (
     <section id="kategori" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-end justify-between">
@@ -60,7 +78,7 @@ export default function Categories() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
         {categories.map((cat) => {
-          const Icon = iconMap[cat.icon];
+          const Icon = iconMap[cat.icon] || Smartphone;
           return (
             <Link
               key={cat.id}

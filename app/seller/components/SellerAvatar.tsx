@@ -1,4 +1,31 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
 export default function SellerAvatar({ className = "h-9 w-9" }: { className?: string }) {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    void supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      if (mounted) setAvatarUrl(profile?.avatar_url ?? null);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (avatarUrl) {
+    return <img src={avatarUrl} alt="Profil seller" className={`rounded-full object-cover ${className}`} />;
+  }
+
   return (
     <span className={`inline-flex overflow-hidden rounded-full bg-[#dbe7ff] ${className}`} aria-hidden>
       <svg viewBox="0 0 36 36" className="h-full w-full">

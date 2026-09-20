@@ -52,10 +52,20 @@ export const productImages = {
   ps5: "https://commons.wikimedia.org/wiki/Special:FilePath/PlayStation%205%20and%20DualSense%20with%20transparent%20background.png",
   xiaomi: "https://i02.appmifile.com/174_operator_sg/27/09/2024/b2a506bd130e53a2ff1983c074910242.jpg",
   jbl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1j5Vr3_XTYp1Uc4AbdTCPRydMSESzFdcQ6yLNbK85Rg&s=10",
+  rogG14: "https://commons.wikimedia.org/wiki/Special:FilePath/ASUS%20ROG%20Zephyrus%202026-08-15%20G14.jpg",
+  canonR50: "https://commons.wikimedia.org/wiki/Special:FilePath/Canon%20EOS%20R50,%20White,%203.jpg",
+  appleWatchS9:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Apple%20Watch%20Series%209%201%202023-11-14.jpg",
+  mxMaster3s:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Logitech%20MX%20Master%203S%20HS12.jpg",
+  anker737:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Anker%20power%20bank%20and%20cable.jpg",
+  switchOled:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Nintendo%20Switch%20%E2%80%93%20OLED-Modell%20mit%20gedockter%20Konsole%2020230506%20HOF01624%20RAW-Export.png?width=800",
 } as const;
 
 const defaultStore: Store = {
-  name: "ElektroMart Official",
+  name: "Jaya store",
   location: "Jakarta",
   rating: 4.9,
   verified: true,
@@ -92,7 +102,7 @@ const samsungS24 = {
   soldTotal: 540,
   location: "Jakarta",
   store: {
-    name: "Toko Gadget Premium",
+    name: "Jaya store",
     location: "Jakarta",
     rating: 4.9,
     verified: true,
@@ -192,7 +202,7 @@ const macbookAirM3 = {
   soldTotal: 320,
   location: "Jakarta",
   store: {
-    name: "Apple Store Partner",
+    name: "Jaya store",
     location: "Jakarta",
     rating: 4.9,
     verified: true,
@@ -287,7 +297,7 @@ const ps5Slim = {
   soldTotal: 156,
   location: "Jakarta",
   store: {
-    name: "GameZone Official",
+    name: "Jaya store",
     location: "Jakarta",
     rating: 4.8,
     verified: true,
@@ -429,14 +439,90 @@ export const flashSaleProducts: Product[] = [
   { id: "f6", ...jblCharge5, badge: "FLASH SALE", sold: 78, soldOf: 100 },
 ];
 
+// Produk best seller dibuat berbeda dari Flash Sale agar tidak ada kartu yang berulang di beranda.
+const alternativeBestSellers: Product[] = [
+  {
+    id: "b1",
+    name: "ASUS ROG Zephyrus G14 Gaming Laptop",
+    price: 24999000,
+    originalPrice: 27999000,
+    discountPercent: 11,
+    image: productImages.rogG14,
+    category: "Laptop",
+    rating: 4.8,
+    sold: 412,
+    location: "Jakarta",
+    badge: "Original",
+  },
+  {
+    id: "b2",
+    name: "Canon EOS R50 Mirrorless Camera",
+    price: 11499000,
+    originalPrice: 12999000,
+    discountPercent: 12,
+    image: productImages.canonR50,
+    category: "Kamera",
+    rating: 4.9,
+    sold: 275,
+    location: "Jakarta",
+    badge: "Original",
+  },
+  {
+    id: "b3",
+    name: "Apple Watch Series 9 GPS 45mm",
+    price: 6799000,
+    originalPrice: 7499000,
+    discountPercent: 9,
+    image: productImages.appleWatchS9,
+    category: "Smart Watch",
+    rating: 4.8,
+    sold: 530,
+    location: "Jakarta",
+    badge: "Original",
+  },
+  {
+    id: "b4",
+    name: "Logitech MX Master 3S Wireless Mouse",
+    price: 1499000,
+    originalPrice: 1799000,
+    discountPercent: 17,
+    image: productImages.mxMaster3s,
+    category: "Aksesoris",
+    rating: 4.7,
+    sold: 680,
+    location: "Jakarta",
+    badge: "Original",
+  },
+  {
+    id: "b5",
+    name: "Anker 737 Power Bank 24000mAh",
+    price: 1899000,
+    originalPrice: 2299000,
+    discountPercent: 17,
+    image: productImages.anker737,
+    category: "Kabel & Charger",
+    rating: 4.8,
+    sold: 395,
+    location: "Jakarta",
+    badge: "Original",
+  },
+  {
+    id: "b6",
+    name: "Nintendo Switch OLED White Edition",
+    price: 4999000,
+    originalPrice: 5499000,
+    discountPercent: 9,
+    image: productImages.switchOled,
+    category: "Gaming",
+    rating: 4.9,
+    sold: 460,
+    location: "Jakarta",
+    badge: "Original",
+  },
+];
+
 export const bestSellerProducts: Product[] = [
-  { id: "b1", ...iphone15ProMax, badge: "Original", sold: 890 },
-  { id: "b2", ...samsungS24, badge: "Original", sold: 540 },
-  { id: "b3", ...macbookAirM3, badge: "Original", sold: 320 },
-  { id: "b4", ...ps5Slim, badge: "Original", sold: 156 },
-  { id: "b5", ...sonyXm5, badge: "Original", sold: 280 },
-  { id: "b6", ...xiaomi14TPro, badge: "Original", sold: 340 },
-  { id: "b7", ...jblCharge5, badge: "Original", sold: 195 },
+  ...alternativeBestSellers,
 ];
 
 export const brands = [
@@ -477,24 +563,43 @@ export function formatRupiah(value: number) {
   return "Rp " + value.toLocaleString("id-ID");
 }
 
+// Kunci "keluarga" produk: nama dinormalkan agar varian yang sama
+// (beda kapasitas / warna / kata tambahan) tidak dianggap produk terpisah.
+function productFamilyKey(name: string): string {
+  let key = name.toLowerCase().replace(/&/g, " and ");
+  key = key.replace(/[^\w\s\d-]/g, " ");
+  key = key.replace(/\b\d+\s*(gb|tb|ssd|inch|inches|ram)\b/g, " ");
+  key = key.replace(
+    /\b(pro max|pro|max|plus|ultra|mini|slim|edition|wireless|noise|cancelling|bluetooth|gaming|titanium|natural|graphite|midnight|starlight|space gray|space grey|silver|gold|rose gold|white|black|blue|green|purple|pink|yellow|red|with|and|of|the|for)\b/g,
+    " "
+  );
+  key = key.replace(/\b\d+\b/g, " ");
+  key = key.replace(/\s+/g, " ").trim();
+  return key;
+}
+
+export function uniqueProducts(products: Product[]): Product[] {
+  const seen = new Set<string>();
+  return products.filter((product) => {
+    const key = productFamilyKey(product.name);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function getAllProducts(): Product[] {
-  return [...flashSaleProducts, ...bestSellerProducts, ...heroProducts];
+  return uniqueProducts([...flashSaleProducts, ...bestSellerProducts, ...heroProducts]);
 }
 
 export function getProductById(id: string): Product | undefined {
-  return getAllProducts().find((product) => product.id === id);
+  return [...flashSaleProducts, ...bestSellerProducts, ...heroProducts].find((product) => product.id === id);
 }
 
 export function getRelatedProducts(product: Product, limit = 4): Product[] {
-  const seen = new Set<string>();
-
   return getAllProducts()
     .filter((p) => {
       if (p.id === product.id || p.category !== product.category) return false;
-
-      const key = p.name.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
       return true;
     })
     .slice(0, limit);

@@ -17,336 +17,236 @@ import {
   Phone,
   FileText,
   Lock,
+  LifeBuoy,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
 // Menu navigasi cepat, sesuai 4 link di footer "BANTUAN"
 const menuBantuan = [
-  { id: "faq", label: "Pertanyaan yang Sering Diajukan", icon: HelpCircle },
-  { id: "syarat-ketentuan", label: "Syarat & Ketentuan", icon: FileText },
-  { id: "kebijakan-privasi", label: "Kebijakan Privasi", icon: Lock },
-  { id: "hubungi-cs", label: "Hubungi CS", icon: MessageCircle },
+  { id: "panduan", labelKey: "gettingStarted", icon: Search },
+  { id: "faq", labelKey: "faq", icon: HelpCircle },
+  { id: "syarat-ketentuan", labelKey: "syaratKetentuan", icon: FileText },
+  { id: "kebijakan-privasi", labelKey: "kebijakanPrivasi", icon: Lock },
+  { id: "hubungi-cs", labelKey: "hubungiCS", icon: MessageCircle },
 ];
 
 // Data panduan langkah-langkah
 const panduanAwal = [
-  {
-    icon: Search,
-    title: "Cari Produk Impian",
-    desc: "Gunakan kolom pencarian atau jelajahi kategori untuk menemukan ribuan produk gadget original. Filter berdasarkan harga, merek, atau rating seller.",
-  },
-  {
-    icon: ShoppingBag,
-    title: "Tambah ke Keranjang & Checkout",
-    desc: "Pilih produk, tentukan jumlah, dan klik 'Beli' atau 'Tambah ke Keranjang'. Lanjutkan ke halaman checkout untuk menyelesaikan pesanan.",
-  },
-  {
-    icon: CreditCard,
-    title: "Pembayaran Aman",
-    desc: "Bayar dengan berbagai metode: transfer bank, e-wallet, kartu kredit/debit, atau cicilan 0%. Semua transaksi dienkripsi dan aman.",
-  },
-  {
-    icon: Truck,
-    title: "Pengiriman & Pelacakan",
-    desc: "Pilih kurir favorit, dapatkan gratis ongkir untuk pesanan tertentu. Lacak status pengiriman real-time di halaman pesanan.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Garansi Resmi & Retur",
-    desc: "Semua produk bergaransi resmi. Jika tidak sesuai atau cacat, kamu bisa mengajukan retur dalam 7 hari setelah barang diterima.",
-  },
+  { icon: Search, titleKey: "help.step1Title", descKey: "help.step1Desc" },
+  { icon: ShoppingBag, titleKey: "help.step2Title", descKey: "help.step2Desc" },
+  { icon: CreditCard, titleKey: "help.step3Title", descKey: "help.step3Desc" },
+  { icon: Truck, titleKey: "help.step4Title", descKey: "help.step4Desc" },
+  { icon: ShieldCheck, titleKey: "help.step5Title", descKey: "help.step5Desc" },
 ];
 
 // Data FAQ
 const faq = [
-  {
-    q: "Bagaimana cara mencari produk?",
-    a: "Ketik kata kunci di kolom pencarian di bagian atas halaman. Kamu juga bisa menjelajahi kategori lewat menu 'Jelajahi Kategori'.",
-  },
-  {
-    q: "Apakah seller di platform ini terpercaya?",
-    a: "Ya, semua seller kami adalah verified. Kami melakukan verifikasi ketat terhadap setiap penjual untuk memastikan keaslian produk dan kualitas layanan.",
-  },
-  {
-    q: "Berapa lama estimasi pengiriman?",
-    a: "Estimasi pengiriman tergantung lokasi dan kurir yang dipilih. Biasanya 1-5 hari kerja untuk dalam negeri. Kamu bisa pantau status pengiriman di halaman pesanan.",
-  },
-  {
-    q: "Apakah ada program cicilan 0%?",
-    a: "Ya, kami bekerja sama dengan beberapa bank untuk menawarkan cicilan 0% hingga 12 bulan. Pilih metode pembayaran kartu kredit saat checkout.",
-  },
-  {
-    q: "Bagaimana cara menghubungi customer service?",
-    a: "Kamu bisa chat langsung dengan tim kami melalui tombol chat di pojok kanan bawah, kirim email, atau lihat kontak lengkap di bagian 'Hubungi CS' pada halaman ini.",
-  },
-  {
-    q: "Bagaimana cara mengembalikan barang?",
-    a: "Ajukan retur melalui halaman pesanan dalam 7 hari setelah barang diterima. Pastikan barang dalam kondisi lengkap dan kemasan asli. Tim kami akan memandu proses selanjutnya.",
-  },
+  { qKey: "help.faq1Q", aKey: "help.faq1A" },
+  { qKey: "help.faq2Q", aKey: "help.faq2A" },
+  { qKey: "help.faq3Q", aKey: "help.faq3A" },
+  { qKey: "help.faq4Q", aKey: "help.faq4A" },
+  { qKey: "help.faq5Q", aKey: "help.faq5A" },
+  { qKey: "help.faq6Q", aKey: "help.faq6A" },
 ];
 
 // Data Syarat & Ketentuan
 const syaratKetentuan = [
-  {
-    title: "1. Akun Pengguna",
-    desc: "Kamu bertanggung jawab menjaga kerahasiaan data akun dan seluruh aktivitas yang terjadi di dalamnya. Informasi yang didaftarkan harus akurat dan terbaru.",
-  },
-  {
-    title: "2. Pemesanan & Pembayaran",
-    desc: "Setiap pesanan dianggap sah setelah pembayaran berhasil diverifikasi. Harga dan stok produk dapat berubah sewaktu-waktu mengikuti ketersediaan dari seller.",
-  },
-  {
-    title: "3. Pengiriman",
-    desc: "Estimasi waktu pengiriman bersifat perkiraan dan dapat berubah karena faktor kurir atau force majeure di luar kendali platform.",
-  },
-  {
-    title: "4. Garansi & Retur",
-    desc: "Produk yang dijual mengikuti ketentuan garansi resmi masing-masing merek. Pengajuan retur berlaku maksimal 7 hari setelah barang diterima, dengan syarat kondisi barang sesuai kebijakan.",
-  },
-  {
-    title: "5. Larangan Penyalahgunaan",
-    desc: "Pengguna dilarang melakukan kecurangan transaksi, manipulasi ulasan, atau tindakan lain yang merugikan pengguna lain maupun platform.",
-  },
-  {
-    title: "6. Perubahan Ketentuan",
-    desc: "Platform berhak memperbarui syarat & ketentuan ini sewaktu-waktu. Perubahan akan diinformasikan melalui halaman ini.",
-  },
+  { titleKey: "help.tos1Title", descKey: "help.tos1Desc" },
+  { titleKey: "help.tos2Title", descKey: "help.tos2Desc" },
+  { titleKey: "help.tos3Title", descKey: "help.tos3Desc" },
+  { titleKey: "help.tos4Title", descKey: "help.tos4Desc" },
+  { titleKey: "help.tos5Title", descKey: "help.tos5Desc" },
+  { titleKey: "help.tos6Title", descKey: "help.tos6Desc" },
 ];
 
 // Data Kebijakan Privasi
 const kebijakanPrivasi = [
-  {
-    title: "1. Data yang Kami Kumpulkan",
-    desc: "Kami mengumpulkan data seperti nama, alamat email, nomor telepon, dan alamat pengiriman yang kamu berikan saat mendaftar atau melakukan transaksi.",
-  },
-  {
-    title: "2. Penggunaan Data",
-    desc: "Data digunakan untuk memproses pesanan, meningkatkan layanan, serta mengirimkan informasi promo atau notifikasi terkait akunmu.",
-  },
-  {
-    title: "3. Keamanan Data",
-    desc: "Seluruh data pribadi disimpan dan diproses dengan enkripsi, dan hanya dapat diakses oleh pihak yang berwenang untuk keperluan operasional platform.",
-  },
-  {
-    title: "4. Berbagi Data ke Pihak Ketiga",
-    desc: "Data hanya dibagikan ke mitra logistik atau pembayaran yang diperlukan untuk menyelesaikan transaksimu, dan tidak diperjualbelikan ke pihak lain.",
-  },
-  {
-    title: "5. Hak Pengguna",
-    desc: "Kamu berhak meminta akses, perbaikan, atau penghapusan data pribadimu dengan menghubungi tim customer service kami.",
-  },
+  { titleKey: "help.privacy1Title", descKey: "help.privacy1Desc" },
+  { titleKey: "help.privacy2Title", descKey: "help.privacy2Desc" },
+  { titleKey: "help.privacy3Title", descKey: "help.privacy3Desc" },
+  { titleKey: "help.privacy4Title", descKey: "help.privacy4Desc" },
+  { titleKey: "help.privacy5Title", descKey: "help.privacy5Desc" },
 ];
 
 export default function BantuanPage() {
   const { t } = useLanguage();
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-white">
       <Navbar />
 
-      {/* ==================== SECTION 1: HERO ==================== */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-navy-900 via-navy-800 to-brand-blue px-4 py-20 sm:px-6 lg:px-8">
-        {/* aksen dekoratif — blob blur, bukan pola SaaS generik */}
-        <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-brand-orange/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
-
-        <div className="relative mx-auto max-w-4xl text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 backdrop-blur">
-            <HelpCircle className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="text-4xl font-extrabold text-white sm:text-5xl">
+      {/* ==================== HEADER ==================== */}
+      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-navy-900 text-white shadow-sm">
+            <LifeBuoy className="h-6 w-6" />
+          </span>
+          <h1 className="mt-5 text-3xl font-bold tracking-tight text-navy-900 sm:text-4xl">
             {t("helpCenter")}
           </h1>
-          <p className="mt-4 text-lg text-slate-300">{t("helpIntro")}</p>
-
-          {/* Navigasi cepat ke tiap bagian, sesuai menu footer */}
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            {menuBantuan.map((item) => (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20"
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </a>
-            ))}
-          </div>
+          <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-slate-500">
+            {t("helpIntro")}
+          </p>
         </div>
       </section>
 
-      {/* ==================== SECTION 2: PANDUAN MEMULAI ==================== */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-slate-100 to-white px-4 py-20 sm:px-6 lg:px-8">
-        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 -translate-y-1/3 translate-x-1/3 rounded-full bg-brand-blue/10 blur-3xl" />
+      {/* ==================== NAVIGASI CEPAT ==================== */}
+      <div className="sticky top-[68px] z-30 border-b border-slate-100 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-3xl flex-wrap justify-center gap-2 px-4 py-3 sm:px-6">
+          {menuBantuan.map((item) => (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:border-navy-900 hover:bg-navy-900 hover:text-white"
+            >
+              <item.icon className="h-3.5 w-3.5" />
+              {t(item.labelKey)}
+            </a>
+          ))}
+        </div>
+      </div>
 
-        <div className="relative mx-auto max-w-7xl">
+      {/* ==================== PANDUAN MEMULAI ==================== */}
+      <section id="panduan" className="scroll-mt-32 px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-navy-900">
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-blue">
               {t("gettingStarted")}
-            </h2>
-            <p className="mt-2 text-slate-600">{t("gettingStartedIntro")}</p>
+            </span>
+            <p className="mt-2 text-slate-500">{t("gettingStartedIntro")}</p>
           </div>
 
-          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2">
             {panduanAwal.map((item, idx) => (
               <div
                 key={idx}
-                className="group rounded-2xl border border-slate-100 bg-white p-6 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brand-blue/30 hover:shadow-lg"
+                className="group rounded-2xl border border-slate-100 bg-white p-6 transition-all duration-300 hover:border-slate-200 hover:shadow-sm"
               >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-brand-orange/10">
-                  <item.icon className="h-6 w-6 text-brand-orange" />
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy-900/5 text-navy-900 transition-colors group-hover:bg-navy-900 group-hover:text-white">
+                    <item.icon className="h-5 w-5" />
+                  </span>
+                  <span className="text-xs font-bold text-slate-300">{String(idx + 1).padStart(2, "0")}</span>
                 </div>
-                <h3 className="text-lg font-semibold text-navy-900">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  {item.desc}
-                </p>
+                <h3 className="mt-4 text-base font-semibold text-navy-900">{t(item.titleKey)}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{t(item.descKey)}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ==================== SECTION 3: FAQ ==================== */}
-      <section id="faq" className="scroll-mt-24 bg-slate-100 px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl">
+      {/* ==================== FAQ ==================== */}
+      <section id="faq" className="scroll-mt-32 border-t border-slate-100 bg-slate-50/60 px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-navy-900">{t("faq")}</h2>
-            <p className="mt-2 text-slate-600">{t("faqIntro")}</p>
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-blue">{t("faq")}</span>
+            <p className="mt-2 text-slate-500">{t("faqIntro")}</p>
           </div>
 
-          <div className="mt-12 space-y-4">
+          <div className="mt-8 space-y-3">
             {faq.map((item, idx) => (
               <details
                 key={idx}
-                className="group rounded-lg border border-slate-200 bg-white p-5 transition-colors open:border-brand-blue open:ring-1 open:ring-brand-blue/20 hover:border-brand-blue/50"
+                className="group rounded-2xl border border-slate-100 bg-white px-5 py-4 transition-colors open:border-slate-200 hover:border-slate-200"
               >
-                <summary className="flex cursor-pointer items-center justify-between font-semibold text-navy-900">
-                  {item.q}
-                  <ChevronDown className="h-5 w-5 text-slate-400 transition-transform duration-300 group-open:rotate-180 group-open:text-brand-blue" />
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-navy-900">
+                  {t(item.qKey)}
+                  <ChevronDown className="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                  {item.a}
-                </p>
+                <p className="mt-3 text-sm leading-relaxed text-slate-500">{t(item.aKey)}</p>
               </details>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ==================== SECTION 4: SYARAT & KETENTUAN ==================== */}
-      <section id="syarat-ketentuan" className="scroll-mt-24 bg-white px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl">
+      {/* ==================== SYARAT & KETENTUAN ==================== */}
+      <section id="syarat-ketentuan" className="scroll-mt-32 px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-orange/10">
-              <FileText className="h-7 w-7 text-brand-orange" />
-            </div>
-            <h2 className="text-3xl font-bold text-navy-900">
-              Syarat & Ketentuan
-            </h2>
-            <p className="mt-2 text-slate-600">
-              Dengan menggunakan platform ini, kamu dianggap telah membaca dan
-              menyetujui ketentuan berikut.
-            </p>
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-blue">{t("syaratKetentuan")}</span>
+            <p className="mt-2 text-slate-500">{t("help.tosIntro")}</p>
           </div>
 
-          <div className="mt-10 divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
+          <div className="mt-8 space-y-3">
             {syaratKetentuan.map((item, idx) => (
-              <div key={idx} className="border-l-4 border-l-brand-blue/70 bg-white px-6 py-5">
-                <h3 className="text-base font-semibold text-navy-900">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  {item.desc}
-                </p>
+              <div key={idx} className="rounded-2xl border border-slate-100 bg-white p-5">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-navy-900/5 text-[10px] font-bold text-navy-900">
+                    {idx + 1}
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-navy-900">{t(item.titleKey)}</h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{t(item.descKey)}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ==================== SECTION 5: KEBIJAKAN PRIVASI ==================== */}
-      <section id="kebijakan-privasi" className="scroll-mt-24 bg-slate-100 px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl">
+      {/* ==================== KEBIJAKAN PRIVASI ==================== */}
+      <section id="kebijakan-privasi" className="scroll-mt-32 border-t border-slate-100 bg-slate-50/60 px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-orange/10">
-              <Lock className="h-7 w-7 text-brand-orange" />
-            </div>
-            <h2 className="text-3xl font-bold text-navy-900">
-              Kebijakan Privasi
-            </h2>
-            <p className="mt-2 text-slate-600">
-              Kami berkomitmen menjaga kerahasiaan dan keamanan data pribadi
-              pengguna.
-            </p>
+            <span className="text-xs font-bold uppercase tracking-widest text-brand-blue">{t("kebijakanPrivasi")}</span>
+            <p className="mt-2 text-slate-500">{t("help.privacyIntro")}</p>
           </div>
 
-          <div className="mt-10 divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 bg-white">
+          <div className="mt-8 space-y-3">
             {kebijakanPrivasi.map((item, idx) => (
-              <div key={idx} className="border-l-4 border-l-brand-orange/70 px-6 py-5">
-                <h3 className="text-base font-semibold text-navy-900">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  {item.desc}
-                </p>
+              <div key={idx} className="rounded-2xl border border-slate-100 bg-white p-5">
+                <h3 className="text-sm font-semibold text-navy-900">{t(item.titleKey)}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{t(item.descKey)}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ==================== SECTION 6: HUBUNGI CS ==================== */}
-      <section
-        id="hubungi-cs"
-        className="relative scroll-mt-24 overflow-hidden bg-gradient-to-r from-navy-900 to-navy-800 px-4 py-20 sm:px-6 lg:px-8"
-      >
-        <div className="pointer-events-none absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-brand-blue/20 blur-3xl" />
-        <div className="pointer-events-none absolute -right-16 top-0 h-64 w-64 rounded-full bg-brand-orange/10 blur-3xl" />
+      {/* ==================== HUBUNGI CS ==================== */}
+      <section id="hubungi-cs" className="scroll-mt-32 px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl">
+          <div className="rounded-3xl border border-slate-100 bg-slate-50/80 px-6 py-12 text-center sm:px-10">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-navy-900 text-white shadow-sm">
+              <MessageCircle className="h-6 w-6" />
+            </span>
+            <h2 className="mt-4 text-2xl font-bold tracking-tight text-navy-900">{t("hubungiCS")}</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">{t("help.csDesc")}</p>
 
-        <div className="relative mx-auto max-w-4xl text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-orange/20">
-            <MessageCircle className="h-7 w-7 text-brand-orange" />
-          </div>
-          <h2 className="text-3xl font-bold text-white">Hubungi CS</h2>
-          <p className="mt-3 text-slate-300">
-            Tim support kami siap membantu kamu melalui live chat, telepon,
-            atau email.
-          </p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 text-left transition-colors hover:border-slate-200">
+                <MessageCircle className="h-5 w-5 text-brand-blue" />
+                <h3 className="mt-2 text-sm font-semibold text-navy-900">{t("help.liveChat")}</h3>
+                <p className="mt-1 text-xs text-slate-500">{t("help.csDaily")}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 text-left transition-colors hover:border-slate-200">
+                <Mail className="h-5 w-5 text-brand-blue" />
+                <h3 className="mt-2 text-sm font-semibold text-navy-900">Email</h3>
+                <p className="mt-1 break-all text-xs text-slate-500">esmodkeisya@gmail.com</p>
+              </div>
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 text-left transition-colors hover:border-slate-200">
+                <Phone className="h-5 w-5 text-brand-blue" />
+                <h3 className="mt-2 text-sm font-semibold text-navy-900">{t("help.phone")}</h3>
+                <p className="mt-1 text-xs text-slate-500">08.00–20.00</p>
+              </div>
+            </div>
 
-          <div className="mt-10 grid gap-6 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition-colors hover:border-brand-orange/40">
-              <MessageCircle className="mx-auto h-6 w-6 text-brand-orange" />
-              <h3 className="mt-3 font-semibold text-white">Live Chat</h3>
-              <p className="mt-1 text-sm text-slate-300">Setiap hari, 24 jam</p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/kontak"
+                className="inline-flex items-center gap-2 rounded-xl bg-navy-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-navy-800"
+              >
+                {t("help.contactUs")}
+              </Link>
+              <Link
+                href="/beranda"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300"
+              >
+                {t("admin.backHome")}
+              </Link>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition-colors hover:border-brand-orange/40">
-              <Mail className="mx-auto h-6 w-6 text-brand-orange" />
-              <h3 className="mt-3 font-semibold text-white">Email</h3>
-              <p className="mt-1 text-sm text-slate-300">
-                esmodkeisya@gmail.com
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition-colors hover:border-brand-orange/40">
-              <Phone className="mx-auto h-6 w-6 text-brand-orange" />
-              <h3 className="mt-3 font-semibold text-white">Telepon</h3>
-              <p className="mt-1 text-sm text-slate-300">08.00–20.00</p>
-            </div>
-          </div>
-
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <Link
-              href="/kontak"
-              className="inline-flex items-center gap-2 rounded-lg bg-brand-orange px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-orange-600 hover:shadow-lg"
-            >
-              Hubungi Kami
-            </Link>
-            <Link
-              href="/beranda"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-white/10"
-            >
-              Kembali ke Beranda
-            </Link>
           </div>
         </div>
       </section>

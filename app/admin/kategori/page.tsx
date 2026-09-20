@@ -1,21 +1,77 @@
 "use client";
 
-import { useState } from "react";
-import { Filter, Laptop, List, PlusCircle, Smartphone, Watch } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Filter, List, Pencil, PlusCircle, Trash2 } from "lucide-react";
 import TopBar from "../components/TopBar";
 import { useLanguage } from "@/lib/i18n";
-
-const categories = [
-  { name: "Smartphone", icon: Smartphone, color: "#3B82F6", sub: 8, attrs: ["RAM", "Storage", "OS"] },
-  { name: "Laptop", icon: Laptop, color: "#8B5CF6", sub: 12, attrs: ["Processor", "RAM", "GPU"] },
-  { name: "Smart Watch", icon: Watch, color: "#10B981", sub: 4, attrs: ["Connectivity", "Battery Life"] },
-];
+import { api, type CategoryRecord } from "@/lib/api";
 
 export default function AdminKategori() {
   const { t } = useLanguage();
+  const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#F59E0B");
   const [subs, setSubs] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function load() {
+    try {
+      const data = await api<{ categories: CategoryRecord[] }>("/api/categories");
+      setCategories(data.categories || []);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("api.unavailable"));
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function saveCategory() {
+    if (!name.trim()) return;
+    setError("");
+    try {
+      if (editingId) {
+        await api(`/api/categories/${editingId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ name, color, subcategories: subs }),
+        });
+      } else {
+        await api("/api/categories", {
+          method: "POST",
+          body: JSON.stringify({ name, color, subcategories: subs }),
+        });
+      }
+      setName("");
+      setSubs("");
+      setEditingId(null);
+      setMessage(t("admin.saved"));
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("api.unavailable"));
+    }
+  }
+
+  function startEdit(c: CategoryRecord) {
+    setEditingId(c.id);
+    setName(c.name);
+    setColor(c.color || "#F59E0B");
+    setSubs((c.subcategories || []).join(", "));
+  }
+
+  async function remove(id: string) {
+    if (!window.confirm(t("admin.confirmDelete"))) return;
+    try {
+      await api(`/api/categories/${id}`, { method: "DELETE" });
+      setMessage(t("admin.deleted"));
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("api.unavailable"));
+    }
+  }
 
   return (
     <div className="min-h-full bg-admin-canvas">
@@ -26,10 +82,9 @@ export default function AdminKategori() {
             <h1 className="text-[28px] font-bold tracking-tight text-admin-ink">{t("admin.manageGadgetCategories")}</h1>
             <p className="mt-1 text-sm text-admin-muted">{t("admin.categoriesSubtitle")}</p>
           </div>
-          <button type="button" className="rounded-xl bg-admin-navy px-4 py-2.5 text-sm font-semibold text-white">
-            {t("admin.addNewCategory")}
-          </button>
         </div>
+        {message ? <p className="mb-4 text-sm text-emerald-600">{message}</p> : null}
+        {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
           <div className="rounded-2xl bg-white p-5 shadow-card xl:col-span-2">
@@ -48,57 +103,45 @@ export default function AdminKategori() {
                     <th className="px-4 py-3 font-semibold">{t("admin.categoryName")}</th>
                     <th className="px-4 py-3 font-semibold">{t("admin.identityColor")}</th>
                     <th className="px-4 py-3 font-semibold">{t("admin.subCategory")}</th>
-                    <th className="px-4 py-3 font-semibold">{t("admin.requiredAttributes")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("admin.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {categories.map((c) => {
-                    const Icon = c.icon;
-                    return (
-                      <tr key={c.name} className="border-t border-[#F1F4F8]">
-                        <td className="px-4 py-4">
-                          <span className="flex items-center gap-2 font-semibold text-admin-ink">
-                            <Icon size={16} className="text-admin-muted" /> {c.name}
-                          </span>
-                        </td>
-                        <td className="px-4">
-                          <span className="flex items-center gap-2 text-admin-ink">
-                            <span className="h-3.5 w-3.5 rounded-full" style={{ background: c.color }} />
-                            {c.color}
-                          </span>
-                        </td>
-                        <td className="px-4">
-                          <span className="rounded-full bg-[#E8F0FE] px-2.5 py-1 text-xs font-semibold text-[#2563EB]">{c.sub}</span>
-                        </td>
-                        <td className="px-4">
-                          <div className="flex flex-wrap gap-1.5">
-                            {c.attrs.map((a) => (
-                              <span key={a} className="rounded-md bg-admin-navy px-2 py-0.5 text-[11px] font-semibold text-white">
-                                {a}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {categories.map((c) => (
+                    <tr key={c.id} className="border-t border-[#F1F4F8]">
+                      <td className="px-4 py-4 font-semibold text-admin-ink">{c.name}</td>
+                      <td className="px-4">
+                        <span className="flex items-center gap-2 text-admin-ink">
+                          <span className="h-3.5 w-3.5 rounded-full" style={{ background: c.color || "#94a3b8" }} />
+                          {c.color}
+                        </span>
+                      </td>
+                      <td className="px-4">
+                        <span className="rounded-full bg-[#E8F0FE] px-2.5 py-1 text-xs font-semibold text-[#2563EB]">{c.subcategories?.length || 0}</span>
+                      </td>
+                      <td className="px-4">
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => startEdit(c)} className="text-admin-muted hover:text-admin-ink" aria-label={t("admin.editCategory")}>
+                            <Pencil size={16} />
+                          </button>
+                          <button type="button" onClick={() => void remove(c.id)} className="text-red-500" aria-label={t("admin.deleteCategory")}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-            <div className="mt-4 flex items-center justify-between text-[13px] text-admin-muted">
-              <span>{t("admin.showingCategories")}</span>
-              <div className="flex gap-1.5">
-                <button type="button" className="h-8 w-8 rounded-lg border border-[#E4E8F1]">‹</button>
-                <button type="button" className="h-8 w-8 rounded-lg bg-admin-navy text-white">1</button>
-                <button type="button" className="h-8 w-8 rounded-lg border border-[#E4E8F1]">2</button>
-                <button type="button" className="h-8 w-8 rounded-lg border border-[#E4E8F1]">›</button>
-              </div>
+            <div className="mt-4 text-[13px] text-admin-muted">
+              {t("admin.showingCategories", { count: categories.length })}
             </div>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-card">
             <h2 className="mb-5 flex items-center gap-2 text-base font-bold text-admin-ink">
-              <PlusCircle size={18} className="text-admin-accent" /> {t("admin.quickAddCategory")}
+              <PlusCircle size={18} className="text-admin-accent" /> {editingId ? t("admin.editCategory") : t("admin.quickAddCategory")}
             </h2>
             <label className="mb-1.5 block text-sm font-semibold text-admin-ink">{t("admin.parentCategoryName")}</label>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("admin.categoryNamePlaceholder")} className="mb-4 h-11 w-full rounded-lg border border-[#E4E8F1] px-3 text-sm outline-none" />
@@ -109,9 +152,14 @@ export default function AdminKategori() {
             </div>
             <label className="mb-1.5 block text-sm font-semibold text-admin-ink">{t("admin.initialSubCategory")}</label>
             <textarea value={subs} onChange={(e) => setSubs(e.target.value)} rows={4} placeholder={t("admin.subCategoryPlaceholder")} className="mb-5 w-full rounded-lg border border-[#E4E8F1] px-3 py-2 text-sm outline-none" />
-            <button type="button" className="w-full rounded-xl bg-admin-accent py-3 text-sm font-semibold text-white">
+            <button type="button" onClick={() => void saveCategory()} className="w-full rounded-xl bg-admin-accent py-3 text-sm font-semibold text-white">
               {t("admin.saveCategory")}
             </button>
+            {editingId ? (
+              <button type="button" onClick={() => { setEditingId(null); setName(""); setSubs(""); }} className="mt-2 w-full py-2 text-sm font-semibold text-admin-muted">
+                {t("admin.cancel")}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

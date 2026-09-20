@@ -36,28 +36,23 @@ npm run dev
 
 Buka http://localhost:3000
 
-## Menghubungkan ke Backend (Node.js / Laravel + Supabase)
+## Menghubungkan ke Backend (Node.js + Supabase)
 
-Semua data saat ini ada di `lib/data.ts` (mock/dummy) supaya frontend bisa langsung jalan.
-Untuk menyambungkan ke backend nanti:
+Backend Express ada di folder `server/` dan menulis ke tabel Supabase (`profiles`, `shipping_addresses`, `categories`, `products`).
 
-1. **Buat API client**, mis. `lib/api.ts`, yang fetch ke endpoint backend kamu
-   (Node.js/Express atau Laravel API), contoh:
-   ```ts
-   export async function getFlashSaleProducts() {
-     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/flash-sale`);
-     return res.json();
-   }
-   ```
-2. **Ganti import** di komponen seperti `FlashSale.tsx` dan `BestSellers.tsx`
-   dari `import { flashSaleProducts } from "@/lib/data"` menjadi hasil fetch
-   (bisa pakai Server Component `async function`, atau `useEffect` bila perlu client-side).
-3. **Supabase**: jika Supabase dipakai untuk auth/database langsung dari frontend,
-   install `@supabase/supabase-js`, buat `lib/supabase.ts` untuk inisialisasi client,
-   lalu query tabel produk/kategori langsung dari sana.
-4. **Laravel**: kalau Laravel jadi REST API terpisah, cukup arahkan `NEXT_PUBLIC_API_URL`
-   ke base URL Laravel (mis. `https://api.elektromart.test`), pastikan CORS
-   di Laravel mengizinkan origin frontend Next.js.
+1. Salin `.env.example` menjadi `.env`, lalu isi URL/anon key Supabase.
+2. Tambahkan `SUPABASE_SERVICE_ROLE_KEY` (dari Project Settings > API) untuk backend.
+3. Jalankan blok tambahan di `supabase.sql` pada SQL Editor Supabase.
+4. Install dan jalankan API:
+
+```bash
+npm install --prefix server
+npm run dev:api
+```
+
+5. Frontend: `npm run dev` (http://localhost:3000) memanggil `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`).
+
+CRUD admin: kategori, seller, buyer. CRUD seller: produk. Profil buyer menyimpan data pribadi + alamat pengiriman ke database.
 
 ## Catatan
 

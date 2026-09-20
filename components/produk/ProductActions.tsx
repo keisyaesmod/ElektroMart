@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingCart, Heart, Share2, MessageCircle, Check } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Flag, Share2, MessageCircle, Check } from "lucide-react";
 import { useCart } from "@/lib/CartContext";
+import { api } from "@/lib/api";
+import { slugify } from "@/lib/slugify";
 import type { Product } from "@/lib/data";
 import { useLanguage } from "@/lib/i18n";
+import ReportModal from "./ReportModal";
 
 export default function ProductActions({
   product,
@@ -15,8 +18,9 @@ export default function ProductActions({
   stock?: number;
 }) {
   const [qty, setQty] = useState(1);
-  const [wishlisted, setWishlisted] = useState(false);
   const [added, setAdded] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [chatBusy, setChatBusy] = useState(false);
   const { addItem } = useCart();
   const router = useRouter();
   const { t } = useLanguage();
@@ -60,6 +64,31 @@ export default function ProductActions({
       qty
     );
     router.push("/checkout");
+  };
+
+  const handleOpenChat = async () => {
+    if (chatBusy) return;
+    setChatBusy(true);
+    try {
+      const data = await api<{ stores: { id: string; store_name?: string | null }[] }>("/api/stores");
+      const store = (data.stores || []).find(
+        (s) => s.store_name && slugify(s.store_name) === "jaya-store"
+      );
+      if (!store) return;
+      const { conversation } = await api<{ conversation: { id: string } }>("/api/conversations", {
+        method: "POST",
+        body: JSON.stringify({ seller_id: store.id }),
+      });
+      router.push(`/chat?conversation=${conversation.id}`);
+    } catch (err) {
+      if (err instanceof Error && "status" in err && (err as { status: number }).status === 401) {
+        router.push("/login");
+      } else {
+        router.push("/chat");
+      }
+    } finally {
+      setChatBusy(false);
+    }
   };
 
   return (
@@ -112,23 +141,32 @@ export default function ProductActions({
 
       <div className="mt-4 flex items-center gap-5 text-sm">
         <button
-          onClick={() => setWishlisted((prev) => !prev)}
+          onClick={() => setReportOpen(true)}
           className="flex items-center gap-1.5 text-slate-500 hover:text-red-500"
         >
-          <Heart
-            className={`h-4 w-4 ${wishlisted ? "fill-red-500 text-red-500" : ""}`}
-          />
-          {t("wishlist")}
+          <Flag className="h-4 w-4" />
+          {t("report.title")}
         </button>
         <button className="flex items-center gap-1.5 text-slate-500 hover:text-navy-900">
           <Share2 className="h-4 w-4" />
           {t("product.share")}
         </button>
-        <button className="ml-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-4 py-2 font-medium text-slate-700 hover:bg-slate-200">
+        <button onClick={() => void handleOpenChat()} disabled={chatBusy} className="ml-auto flex items-center gap-1.5 rounded-lg bg-slate-100 px-4 py-2 font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-60">
           <MessageCircle className="h-4 w-4" />
-          Chat
+          {t("chat")}
         </button>
       </div>
+
+      {reportOpen && (
+        <ReportModal
+          product={{
+            id: product.id,
+            name: product.name,
+            image: product.image,
+          }}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
     </div>
   );
 }

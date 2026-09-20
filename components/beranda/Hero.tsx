@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import ProductImage from "@/components/produk/ProductImage";
 import { heroProducts, formatRupiah } from "@/lib/data";
 import { useLanguage } from "@/lib/i18n";
+import { applyLiveProducts, useLiveProducts } from "@/hooks/useLiveProducts";
 
 const stats = [
   { value: "100rb+", label: "products" },
@@ -14,6 +15,8 @@ const stats = [
 
 export default function Hero() {
   const { t } = useLanguage();
+  const live = useLiveProducts();
+  const items = applyLiveProducts(heroProducts, live);
   return (
     <section className="bg-gradient-to-br from-navy-900 via-navy-800 to-brand-blue">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8 lg:py-24">
@@ -56,7 +59,7 @@ export default function Hero() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 rounded-2xl bg-white/5 p-4 backdrop-blur-sm">
-          {heroProducts.map((product) => (
+          {items.map((product) => (
             <Link
               key={product.id}
               href={`/produk/${product.id}`}

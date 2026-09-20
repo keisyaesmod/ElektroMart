@@ -1,76 +1,76 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import Pagination from "../components/Pagination";
-import type { Product, ProductStatus } from "../types";
-
-const products: Product[] = [
-  {
-    id: "1",
-    name: "Laptop Gaming ROG Zephyrus G14",
-    sku: "ROG-G14-2023",
-    category: "Laptop & PC",
-    price: 25500000,
-    stock: 45,
-    status: "Aktif",
-    imageSrc: "/products/macbook-m3.svg",
-  },
-  {
-    id: "2",
-    name: "Smartphone Galaxy S24 Ultra 512GB",
-    sku: "SG-24U-512-TI",
-    category: "Smartphone",
-    price: 21999000,
-    stock: 120,
-    status: "Aktif",
-    imageSrc: "/products/samsung-s24.svg",
-  },
-  {
-    id: "3",
-    name: "Sony WH-1000XM5 Wireless Headphones",
-    sku: "SN-WH1000XM5-BLK",
-    category: "Audio",
-    price: 5250000,
-    stock: 0,
-    status: "Habis",
-    imageSrc: "/products/sony-xm5.svg",
-  },
-];
-
-const filters: { id: string; labelKey: string; count: number }[] = [
-  { id: "Semua", labelKey: "all", count: 124 },
-  { id: "Aktif", labelKey: "admin.active", count: 110 },
-  { id: "Habis", labelKey: "seller.outOfStock", count: 10 },
-  { id: "Draft", labelKey: "seller.draft", count: 4 },
-];
-
-const statusKey: Record<ProductStatus, string> = {
-  Aktif: "admin.active",
-  Habis: "seller.outOfStock",
-  Draft: "seller.draft",
-};
+import { api, type ProductRecord } from "@/lib/api";
 
 function formatRupiah(value: number) {
   return "Rp " + value.toLocaleString("id-ID");
 }
 
-function StatusBadge({ status }: { status: ProductStatus }) {
+function statusKey(status: ProductRecord["status"]) {
+  if (status === "out_of_stock") return "seller.outOfStock";
+  if (status === "draft") return "seller.draft";
+  return "admin.active";
+}
+
+function StatusBadge({ status }: { status: ProductRecord["status"] }) {
   const { t } = useLanguage();
-  const styles: Record<ProductStatus, string> = {
-    Aktif: "bg-[#E8F0FE] text-[#2563EB]",
-    Habis: "bg-[#FDECEC] text-[#E11D48]",
-    Draft: "bg-[#EEF1F6] text-seller-muted",
+  const styles = {
+    active: "bg-[#E8F0FE] text-[#2563EB]",
+    out_of_stock: "bg-[#FDECEC] text-[#E11D48]",
+    draft: "bg-[#EEF1F6] text-seller-muted",
   };
-  return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}>{t(statusKey[status])}</span>;
+  return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}>{t(statusKey(status))}</span>;
 }
 
 export default function Products() {
-  const [activeFilter, setActiveFilter] = useState("Semua");
+  const [filter, setFilter] = useState("all");
+  const [products, setProducts] = useState<ProductRecord[]>([]);
+  const [error, setError] = useState("");
   const router = useRouter();
   const { t } = useLanguage();
+
+  async function load() {
+    try {
+      const data = await api<{ products: ProductRecord[] }>("/api/products");
+      setProducts(data.products || []);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("api.unavailable"));
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const filtered = products.filter((p) => {
+    if (filter === "active") return p.status === "active";
+    if (filter === "out") return p.status === "out_of_stock";
+    if (filter === "draft") return p.status === "draft";
+    return true;
+  });
+
+  const filters = [
+    { id: "all", labelKey: "all", count: products.length },
+    { id: "active", labelKey: "admin.active", count: products.filter((p) => p.status === "active").length },
+    { id: "out", labelKey: "seller.outOfStock", count: products.filter((p) => p.status === "out_of_stock").length },
+    { id: "draft", labelKey: "seller.draft", count: products.filter((p) => p.status === "draft").length },
+  ];
+
+  async function remove(id: string) {
+    if (!window.confirm(t("seller.confirmDeleteProduct"))) return;
+    try {
+      await api(`/api/products/${id}`, { method: "DELETE" });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("api.unavailable"));
+    }
+  }
 
   return (
     <div className="flex-1 overflow-y-auto bg-seller-canvas">
@@ -88,24 +88,23 @@ export default function Products() {
             <Plus size={16} /> {t("seller.addProduct")}
           </button>
         </div>
+        {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
 
         <div className="rounded-2xl bg-white p-5 shadow-card">
           <div className="mb-5 flex flex-wrap items-center gap-2">
-              {filters.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setActiveFilter(f.id)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                    activeFilter === f.id
-                      ? "bg-seller-navy text-white"
-                      : "bg-[#F1F4F8] text-seller-ink hover:bg-[#E6EAF2]"
-                  }`}
-                >
-                  {t(f.labelKey)} ({f.count})
-                </button>
-              ))}
-            </div>
+            {filters.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFilter(f.id)}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  filter === f.id ? "bg-seller-navy text-white" : "bg-[#F1F4F8] text-seller-ink hover:bg-[#E6EAF2]"
+                }`}
+              >
+                {t(f.labelKey)} ({f.count})
+              </button>
+            ))}
+          </div>
 
           <div className="overflow-hidden rounded-xl border border-[#EEF1F6]">
             <table className="w-full text-left text-sm">
@@ -120,16 +119,20 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
+                {filtered.map((p) => (
                   <tr key={p.id} className="border-t border-[#F1F4F8]">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-[#F4F6FA]">
-                          <img src={p.imageSrc} alt="" className="h-full w-full object-contain" />
-                        </div>
+                        <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#EEF1F6] bg-[#F8FAFC]">
+                          {p.image_url ? (
+                            <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-xs text-seller-muted">-</span>
+                          )}
+                        </span>
                         <div>
                           <p className="font-semibold text-seller-ink">{p.name}</p>
-                          <p className="text-xs text-seller-muted">SKU: {p.sku}</p>
+                          <p className="text-xs text-seller-muted">SKU: {p.sku || "-"}</p>
                         </div>
                       </div>
                     </td>
@@ -140,9 +143,14 @@ export default function Products() {
                       <StatusBadge status={p.status} />
                     </td>
                     <td className="px-4">
-                      <button type="button" aria-label={`${t("seller.edit")} ${p.name}`} className="text-seller-muted hover:text-seller-ink">
-                        <Pencil size={16} />
-                      </button>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => router.push(`/seller/produk/tambahproduk?id=${p.id}`)} className="text-seller-muted hover:text-seller-ink" aria-label={`${t("seller.edit")} ${p.name}`}>
+                          <Pencil size={16} />
+                        </button>
+                        <button type="button" onClick={() => void remove(p.id)} className="text-red-500" aria-label={t("seller.deleteProduct")}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -150,7 +158,7 @@ export default function Products() {
             </table>
           </div>
 
-          <Pagination summary={`${t("seller.showing")} 1-10 ${t("of")} 124 ${t("seller.products")}`} />
+          <Pagination summary={`${t("seller.showing")} 1-${filtered.length} ${t("of")} ${filtered.length} ${t("seller.products")}`} />
         </div>
       </div>
     </div>

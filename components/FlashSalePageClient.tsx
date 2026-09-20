@@ -20,7 +20,7 @@ export default function FlashSalePageClient() {
             <Zap className="h-7 w-7 fill-white text-white" />
           </span>
           <div>
-            <h1 className="text-3xl font-extrabold text-navy-900">Flash Sale</h1>
+            <h1 className="text-3xl font-extrabold text-navy-900">{t("flashSale")}</h1>
             <p className="mt-0.5 text-sm text-slate-500">
               {t("flashSaleDescription")}
             </p>

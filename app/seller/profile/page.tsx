@@ -1,9 +1,11 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { Check, ImagePlus, Upload } from "lucide-react";
 import TopBar from "../components/TopBar";
 import { useLanguage } from "@/lib/i18n";
+import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 interface Schedule {
   dayKey: string;
@@ -31,13 +33,63 @@ export default function SellerProfile() {
   const [description, setDescription] = useState(t("seller.storeDescDefault"));
   const [logoName, setLogoName] = useState("");
   const [bannerName, setBannerName] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [bannerUrl, setBannerUrl] = useState("");
   const [schedule, setSchedule] = useState(initialSchedule);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  function selectFile(event: ChangeEvent<HTMLInputElement>, type: "logo" | "banner") {
-    const fileName = event.target.files?.[0]?.name ?? "";
-    if (type === "logo") setLogoName(fileName);
-    else setBannerName(fileName);
+  useEffect(() => {
+    void api<{ profile: { store_name?: string | null; store_description?: string | null; avatar_url?: string | null; store_banner_url?: string | null; operating_hours?: Schedule[] | null } }>("/api/profile")
+      .then(({ profile }) => {
+        if (profile.store_name) setStoreName(profile.store_name);
+        if (profile.store_description !== null && profile.store_description !== undefined) setDescription(profile.store_description);
+        if (profile.avatar_url) {
+          setLogoName("Logo tersimpan");
+          setLogoUrl(profile.avatar_url);
+        }
+        if (profile.store_banner_url) {
+          setBannerName("Banner tersimpan");
+          setBannerUrl(profile.store_banner_url);
+        }
+        if (profile.operating_hours?.length) setSchedule(profile.operating_hours);
+      })
+      .catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Gagal memuat profil toko."))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  async function selectFile(event: ChangeEvent<HTMLInputElement>, type: "logo" | "banner") {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Ukuran gambar maksimal 2MB.");
+      return;
+    }
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+    if (!userId) {
+      setError("Sesi login tidak ditemukan. Silakan login ulang.");
+      return;
+    }
+    const path = `${userId}/${type}-${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+    if (uploadError) {
+      setError(`Upload gagal: ${uploadError.message}`);
+      return;
+    }
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    if (type === "logo") {
+      setLogoName(file.name);
+      setLogoUrl(data.publicUrl);
+    } else {
+      setBannerName(file.name);
+      setBannerUrl(data.publicUrl);
+    }
+    setError("");
+    if (type === "logo") await saveProfile({ avatar_url: data.publicUrl });
+    else await saveProfile({ store_banner_url: data.publicUrl });
   }
 
   function updateSchedule(index: number, key: "start" | "end" | "enabled", value: string | boolean) {
@@ -46,10 +98,31 @@ export default function SellerProfile() {
     );
   }
 
+  async function saveProfile(extra: Record<string, unknown> = {}) {
+    setIsSaving(true);
+    setError("");
+    try {
+      await api("/api/profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          store_name: storeName,
+          store_description: description,
+          operating_hours: schedule,
+          ...extra,
+        }),
+      });
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2400);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Perubahan profil gagal disimpan.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2400);
+    void saveProfile();
   }
 
   return (
@@ -62,6 +135,9 @@ export default function SellerProfile() {
             <h1 className="text-[25px] font-bold tracking-tight text-seller-ink sm:text-[28px]">{t("seller.storeProfileSettings")}</h1>
             <p className="mt-1 text-[12px] text-seller-muted">{t("seller.storeProfileSubtitle")}</p>
           </div>
+
+          {isLoading ? <p className="mb-4 text-[11px] text-seller-muted">Memuat profil toko...</p> : null}
+          {error ? <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-[11px] text-red-600">{error}</p> : null}
 
           <section className="mb-5 rounded-lg border border-[#DEE6F3] bg-white px-5 py-5 shadow-card sm:px-6">
             <h2 className="border-b border-[#E3E9F3] pb-3 text-[14px] font-semibold text-seller-ink">{t("seller.storeBasicInfo")}</h2>
@@ -95,7 +171,7 @@ export default function SellerProfile() {
               <p className="text-[11px] font-semibold text-seller-ink">{t("seller.logoProfilePhoto")}</p>
               <div className="mt-2 flex flex-wrap items-center gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dashed border-[#AEBBD2] bg-[#DCE8FB] text-seller-navy">
-                  <ImagePlus size={20} strokeWidth={1.5} />
+                  {logoUrl ? <img src={logoUrl} alt="Logo toko" className="h-full w-full object-cover" /> : <ImagePlus size={20} strokeWidth={1.5} />}
                 </div>
                 <div>
                   <p className="text-[11px] text-seller-muted">{t("seller.logoSizeHint")}</p>
@@ -108,8 +184,8 @@ export default function SellerProfile() {
             </div>
             <div className="mt-5">
               <p className="text-[11px] font-semibold text-seller-ink">{t("seller.storeBanner")}</p>
-              <label className="mt-2 flex min-h-[86px] cursor-pointer items-center justify-center rounded-md border border-dashed border-[#AEBBD2] bg-[#DCE8FB] text-[11px] text-seller-navy hover:bg-[#D4E2F9]">
-                <span className="flex items-center gap-2"><Upload size={15} /> {bannerName || t("seller.uploadBanner")}</span>
+              <label className="mt-2 flex min-h-[86px] cursor-pointer items-center justify-center overflow-hidden rounded-md border border-dashed border-[#AEBBD2] bg-[#DCE8FB] text-[11px] text-seller-navy hover:bg-[#D4E2F9]">
+                {bannerUrl ? <img src={bannerUrl} alt="Banner toko" className="h-full min-h-[86px] w-full object-cover" /> : <span className="flex items-center gap-2"><Upload size={15} /> {bannerName || t("seller.uploadBanner")}</span>}
                 <input type="file" accept="image/png,image/jpeg,image/gif" className="sr-only" onChange={(event) => selectFile(event, "banner")} />
               </label>
               <p className="mt-2 text-[10px] text-seller-muted">{t("seller.bannerSizeHint")}</p>
@@ -148,7 +224,7 @@ export default function SellerProfile() {
           <div className="mt-5 flex items-center justify-end gap-2">
             {saved && <span className="mr-2 flex items-center gap-1 text-[11px] font-semibold text-emerald-600"><Check size={14} /> {t("seller.changesSaved")}</span>}
             <button type="button" onClick={() => window.history.back()} className="rounded-md border border-[#D8DFEC] bg-white px-5 py-2 text-[11px] font-semibold text-seller-muted hover:bg-[#F8FAFD]">{t("admin.cancel")}</button>
-            <button type="submit" className="rounded-md bg-seller-navy px-5 py-2 text-[11px] font-semibold text-white hover:bg-[#07164A]">{t("admin.saveChanges")}</button>
+            <button type="submit" disabled={isSaving || isLoading} className="rounded-md bg-seller-navy px-5 py-2 text-[11px] font-semibold text-white hover:bg-[#07164A] disabled:cursor-not-allowed disabled:opacity-60">{isSaving ? "Menyimpan..." : t("admin.saveChanges")}</button>
           </div>
         </div>
       </form>

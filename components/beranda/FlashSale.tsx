@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Zap } from "lucide-react";
-import { flashSaleProducts } from "@/lib/data";
+import { flashSaleProducts, uniqueProducts } from "@/lib/data";
 import { FlashSaleCard } from "@/components/produk/ProductCard";
 import { useLanguage } from "@/lib/i18n";
 
@@ -50,7 +50,7 @@ export default function FlashSale() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 p-6 sm:grid-cols-3 lg:grid-cols-6">
-          {flashSaleProducts.map((product) => (
+          {uniqueProducts(flashSaleProducts).map((product) => (
             <FlashSaleCard key={product.id} product={product} />
           ))}
         </div>

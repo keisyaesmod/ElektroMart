@@ -137,7 +137,6 @@ export default function AuthLayout({ mode, children, heading, headingSubtitle }:
         {/* decorative */}
         <div className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-brand-blue/50 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 -right-24 h-96 w-96 rounded-full bg-brand-orange/20 blur-3xl" />
-        <div className="pointer-events-none absolute left-16 top-1/3 h-24 w-24 rounded-full border border-white/10" />
 
         {/* hero */}
         <div className="relative z-10">

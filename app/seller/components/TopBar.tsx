@@ -24,7 +24,12 @@ export default function TopBar({ variant = "bar" }: TopBarProps) {
       }
     >
       <LanguageSwitcher variant="light" />
-      <button type="button" aria-label={t("admin.notifications")} className="relative text-seller-ink">
+      <button
+        type="button"
+        onClick={() => router.push("/seller/laporan")}
+        aria-label={t("report.notifications")}
+        className="relative text-seller-ink"
+      >
         <Bell size={20} strokeWidth={1.7} />
         <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-seller-orange" />
       </button>

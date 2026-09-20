@@ -15,67 +15,77 @@ import {
   ShoppingCart,
   Package,
   ArrowUpRight,
-  Star,
   Activity,
   Banknote,
   Zap,
+  Flag,
+  Loader2,
 } from "lucide-react";
 import TopBar from "../components/TopBar";
 import { useLanguage } from "@/lib/i18n";
+import { api } from "@/lib/api";
+import { formatRupiah } from "@/lib/data";
 
-const categorySales = [
-  { label: "Smartphone", value: 4250, color: "#1a3fd6" },
-  { label: "Laptop", value: 2180, color: "#f59e0b" },
-  { label: "Audio", value: 1430, color: "#10b981" },
-  { label: "Gaming", value: 1120, color: "#8b5cf6" },
-  { label: "Kamera", value: 780, color: "#f43f5e" },
-  { label: "Lainnya", value: 520, color: "#94a3b8" },
-];
+type CategorySlice = { label: string; value: number; color: string };
+type PopularProduct = { name: string; stock: number; category?: string | null };
+type TopSeller = { name: string; products: number };
+type OrderStats = {
+  total: number;
+  thisMonth: number;
+  totalRevenue: number;
+  commissionRevenue: number;
+  escrowHeldFunds: number;
+  totalPayoutToSellers: number;
+  revenueOrders: number;
+};
+type PaymentMethodStat = { name: string; count: number };
+type ReportRecord = {
+  id: string;
+  product_id: string | null;
+  seller_id: string | null;
+  reporter_id: string | null;
+  product_name: string;
+  product_image: string | null;
+  reason: string;
+  description: string | null;
+  status: "pending" | "resolved" | "dismissed";
+  created_at: string;
+  reporter: string | null;
+};
 
-const totalCat = categorySales.reduce((s, c) => s + c.value, 0);
+const reportStatusStyles: Record<ReportRecord["status"], string> = {
+  pending: "bg-amber-50 text-amber-600",
+  resolved: "bg-emerald-50 text-emerald-600",
+  dismissed: "bg-slate-100 text-slate-500",
+};
 
-const popularProducts = [
-  { name: "Samsung Galaxy S24 Ultra", sold: 540, stock: 25, img: "S" },
-  { name: "iPhone 15 Pro Max 256GB", sold: 890, stock: 18, img: "i" },
-  { name: "MacBook Air M3 13\"", sold: 320, stock: 12, img: "M" },
-  { name: "Xiaomi 14T Pro 512GB", sold: 340, stock: 20, img: "X" },
-  { name: "Sony WH-1000XM5", sold: 280, stock: 30, img: "S" },
-];
-
-const topSellers = [
-  { name: "Toko Gadget Premium", revenue: "Rp 284.500.000", products: 48, rating: 4.9 },
-  { name: "GameZone Official", revenue: "Rp 127.800.000", products: 22, rating: 4.8 },
-  { name: "Apple Store Partner", revenue: "Rp 198.300.000", products: 35, rating: 4.9 },
-];
-
-const formatRupiah = (v: number) => "Rp " + v.toLocaleString("id-ID");
-
-function PieChart() {
+function PieChart({ segments }: { segments: CategorySlice[] }) {
   const { t } = useLanguage();
+  const totalCat = segments.reduce((sum, item) => sum + item.value, 0) || segments.length || 1;
   let cumDeg = 0;
-  const segments = categorySales.map((seg) => {
-    const angle = (seg.value / totalCat) * 360;
+  const chartSegments = segments.map((seg) => {
+    const angle = ((seg.value || (totalCat === segments.length ? 1 : 0)) / totalCat) * 360;
     const from = cumDeg;
     cumDeg += angle;
     return { ...seg, from, angle };
   });
-  const gradParts = segments.map(
+  const gradParts = chartSegments.map(
     (s) => `${s.color} ${fromDeg(s.from)}deg ${fromDeg(s.from + s.angle)}deg`
   );
+  const displayTotal = segments.reduce((sum, item) => sum + item.value, 0);
   return (
     <div className="relative mx-auto aspect-square w-52 sm:w-60">
       <div
         className="h-full w-full rounded-full"
         style={{
-          background: `conic-gradient(${gradParts.join(", ")})`,
+          background: segments.length ? `conic-gradient(${gradParts.join(", ")})` : "#e2e8f0",
         }}
       />
       <div className="absolute inset-[22%] rounded-full bg-white shadow-inner" />
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-2xl font-bold text-[#0a1633]">
-          {(totalCat / 1000).toFixed(1)}K
-        </span>
-        <span className="text-[10px] font-medium text-slate-400">{t("admin.totalSold")}</span>
+        <span className="text-2xl font-bold text-[#0a1633]">{segments.length}</span>
+        <span className="text-[10px] font-medium text-slate-400">{t("admin.registeredCategories")}</span>
+        <span className="mt-0.5 text-[10px] text-slate-400">{displayTotal} {t("products")}</span>
       </div>
     </div>
   );
@@ -87,6 +97,70 @@ function fromDeg(deg: number) {
 
 export default function DashboardPage() {
   const { t } = useLanguage();
+  const [stats, setStats] = useState({ sellers: 0, buyers: 0, products: 0, categories: 0 });
+  const [categorySales, setCategorySales] = useState<CategorySlice[]>([]);
+  const [popularProducts, setPopularProducts] = useState<PopularProduct[]>([]);
+  const [topSellers, setTopSellers] = useState<TopSeller[]>([]);
+  const [orders, setOrders] = useState<OrderStats>({
+    total: 0,
+    thisMonth: 0,
+    totalRevenue: 0,
+    commissionRevenue: 0,
+    escrowHeldFunds: 0,
+    totalPayoutToSellers: 0,
+    revenueOrders: 0,
+  });
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodStat[]>([]);
+  const [reports, setReports] = useState<ReportRecord[]>([]);
+  const [busyReportId, setBusyReportId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void api<{
+      stats: { sellers: number; buyers: number; products: number; categories: number };
+      categories: { name: string; color: string; product_count: number }[];
+      products: PopularProduct[];
+      sellers: TopSeller[];
+      orders?: OrderStats;
+      paymentMethods?: PaymentMethodStat[];
+    }>("/api/dashboard/admin")
+      .then((data) => {
+        setStats(data.stats);
+        setCategorySales(
+          (data.categories || []).map((category) => ({
+            label: category.name,
+            value: category.product_count || 0,
+            color: category.color || "#94a3b8",
+          })),
+        );
+        setPopularProducts(data.products || []);
+        setTopSellers(data.sellers || []);
+        if (data.orders) setOrders(data.orders);
+        if (data.paymentMethods) setPaymentMethods(data.paymentMethods);
+        setError("");
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : t("api.unavailable")));
+
+    void api<{ reports: ReportRecord[] }>("/api/reports")
+      .then((data) => setReports(data.reports || []))
+      .catch(() => {});
+  }, [t]);
+
+  async function setReportStatus(id: string, status: ReportRecord["status"]) {
+    setBusyReportId(id);
+    try {
+      await api<{ report: ReportRecord }>(`/api/reports/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("api.unavailable"));
+    } finally {
+      setBusyReportId(null);
+    }
+  }
+
   const navItems = [
     { href: "/admin/dashboard", label: t("dashboard"), icon: LayoutGrid },
     { href: "/admin/kategori", label: t("admin.manageCategories"), icon: Tags },
@@ -152,7 +226,7 @@ export default function DashboardPage() {
                 {t("admin.systemActive")}
               </span>
               <span className="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600">
-                Live Data
+                {t("admin.liveData")}
               </span>
             </div>
           </div>
@@ -164,8 +238,8 @@ export default function DashboardPage() {
               iconBg="bg-emerald-50"
               iconColor="text-emerald-500"
               label={t("admin.totalRevenue")}
-              value="Rp 2.000.000"
-              change={`+18,3% ${t("admin.fromLastMonth")}`}
+              value={formatRupiah(orders.totalRevenue)}
+              change={`${orders.revenueOrders} ${t("soldCount")}`}
               up
             />
             <StatCard
@@ -173,8 +247,8 @@ export default function DashboardPage() {
               iconBg="bg-blue-50"
               iconColor="text-blue-500"
               label={t("admin.totalTransactionsThisMonth")}
-              value="2,847"
-              change={`+12,1% ${t("admin.fromLastMonth")}`}
+              value={String(orders.thisMonth)}
+              change={t("admin.fromDatabase")}
               up
             />
             <StatCard
@@ -182,8 +256,8 @@ export default function DashboardPage() {
               iconBg="bg-orange-50"
               iconColor="text-orange-500"
               label={t("admin.activeSellers")}
-              value="1,245"
-              change={`+124 ${t("admin.newSellers")}`}
+              value={String(stats.sellers)}
+              change={t("admin.fromDatabase")}
               up
             />
             <StatCard
@@ -191,11 +265,13 @@ export default function DashboardPage() {
               iconBg="bg-violet-50"
               iconColor="text-violet-500"
               label={t("admin.registeredBuyers")}
-              value="45.243"
-              change={`+3.2K ${t("admin.thisWeek")}`}
+              value={String(stats.buyers)}
+              change={t("admin.fromDatabase")}
               up
             />
           </div>
+
+          {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
 
           {/* ====== STAT CARDS — Baris 2 ====== */}
           <div className="mt-4 grid grid-cols-2 gap-4">
@@ -204,17 +280,17 @@ export default function DashboardPage() {
               iconBg="bg-indigo-50"
               iconColor="text-indigo-500"
               label={t("admin.registeredProducts")}
-              value="8.432"
-              change={`+312 ${t("admin.thisWeek")}`}
+              value={String(stats.products)}
+              change={t("admin.fromDatabase")}
               up
             />
             <StatCard
-              icon={Zap}
+              icon={Tags}
               iconBg="bg-amber-50"
               iconColor="text-amber-500"
-              label={t("admin.activeFlashSale")}
-              value="3"
-              change={`${t("endsIn")} 6 ${t("admin.hours")}`}
+              label={t("admin.registeredCategories")}
+              value={String(stats.categories)}
+              change={t("admin.fromDatabase")}
               neutral
             />
           </div>
@@ -235,10 +311,11 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-                <PieChart />
+                {categorySales.length ? <PieChart segments={categorySales} /> : <p className="text-sm text-slate-500">{t("admin.noCategoryData")}</p>}
 
                 <div className="flex-1 space-y-3">
                   {categorySales.map((seg) => {
+                    const totalCat = categorySales.reduce((sum, item) => sum + item.value, 0) || 1;
                     const pct = ((seg.value / totalCat) * 100).toFixed(1);
                     return (
                       <div key={seg.label}>
@@ -248,7 +325,7 @@ export default function DashboardPage() {
                               className="inline-block h-2.5 w-2.5 rounded-full"
                               style={{ backgroundColor: seg.color }}
                             />
-                            {seg.label === "Lainnya" ? t("admin.others") : seg.label}
+                            {seg.label}
                           </span>
                           <span className="font-semibold text-[#0a1633]">{seg.value.toLocaleString("id-ID")}</span>
                         </div>
@@ -275,25 +352,37 @@ export default function DashboardPage() {
               <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-card">
                 <h3 className="font-semibold text-[#0a1633]">{t("admin.financeSummary")}</h3>
                 <div className="mt-4 space-y-3">
-                  <FinanceRow label={t("admin.totalRevenue")} value="Rp 48.241.080.000" accent />
-                  <FinanceRow label={t("admin.commissionRevenue")} value="Rp 1.447.232.400" />
-                  <FinanceRow label={t("admin.escrowHeldFunds")} value="Rp 6.890.400.000" />
-                  <FinanceRow label={t("admin.totalPayoutToSellers")} value="Rp 41.350.647.600" />
-                  <FinanceRow label={t("admin.platformBalance")} value="Rp 1.447.232.400" />
+                  <FinanceRow label={t("admin.totalRevenue")} value={formatRupiah(orders.totalRevenue)} accent />
+                  <FinanceRow label={t("admin.commissionRevenue")} value={formatRupiah(orders.commissionRevenue)} />
+                  <FinanceRow label={t("admin.escrowHeldFunds")} value={formatRupiah(orders.escrowHeldFunds)} />
+                  <FinanceRow label={t("admin.totalPayoutToSellers")} value={formatRupiah(orders.totalPayoutToSellers)} />
+                  <FinanceRow label={t("admin.platformBalance")} value={formatRupiah(orders.commissionRevenue)} />
                 </div>
               </div>
 
               {/* Metode Pembayaran Populer */}
               <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-card">
                 <h3 className="font-semibold text-[#0a1633]">{t("admin.popularPaymentMethods")}</h3>
+                {paymentMethods.length ? (
                 <div className="mt-4 space-y-3">
-                  <PaymentMethodRow name="QRIS" pct={38} color="bg-emerald-500" />
-                  <PaymentMethodRow name="GoPay" pct={22} color="bg-blue-500" />
-                  <PaymentMethodRow name="BCA VA" pct={18} color="bg-[#2A74B4]" />
-                  <PaymentMethodRow name="BRI VA" pct={11} color="bg-[#0E56A8]" />
-                  <PaymentMethodRow name="OVO" pct={7} color="bg-purple-500" />
-                  <PaymentMethodRow name={t("admin.others")} pct={4} color="bg-slate-300" />
+                  {paymentMethods.map((pm, idx) => {
+                    const totalPay = paymentMethods.reduce((sum, p) => sum + p.count, 0) || 1;
+                    const pct = Math.round((pm.count / totalPay) * 100);
+                    const colors = ["bg-emerald-500", "bg-blue-500", "bg-[#2A74B4]", "bg-[#0E56A8]", "bg-purple-500", "bg-slate-300"];
+                    return (
+                      <PaymentMethodRow
+                        key={pm.name}
+                        name={pm.name}
+                        pct={pct}
+                        color={colors[idx % colors.length]}
+                        count={pm.count}
+                      />
+                    );
+                  })}
                 </div>
+              ) : (
+                <p className="mt-4 text-sm text-slate-500">{t("admin.noData")}</p>
+              )}
               </div>
             </div>
           </div>
@@ -313,7 +402,7 @@ export default function DashboardPage() {
               </div>
               <div className="divide-y divide-slate-100">
                 {popularProducts.map((p, i) => (
-                  <div key={p.name} className="flex items-center gap-4 px-6 py-3.5">
+                  <div key={`${p.name}-${i}`} className="flex items-center gap-4 px-6 py-3.5">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-navy-900 text-xs font-bold text-white">
                       #{i + 1}
                     </span>
@@ -321,12 +410,8 @@ export default function DashboardPage() {
                       <p className="truncate text-sm font-semibold text-[#0a1633]">{p.name}</p>
                       <p className="mt-0.5 text-xs text-slate-500">{p.stock} {t("admin.unitLeft")}</p>
                     </div>
-                    <div className="flex items-center gap-1 text-amber-500">
-                      <Star className="h-3.5 w-3.5 fill-amber-400" />
-                      <span className="text-xs font-semibold text-[#0a1633]">4.9</span>
-                    </div>
                     <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
-                      {p.sold} {t("soldCount")}
+                      {p.category || t("categoryFallback")}
                     </span>
                   </div>
                 ))}
@@ -347,7 +432,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="divide-y divide-slate-100">
                   {topSellers.map((s, i) => (
-                    <div key={s.name} className="flex items-center gap-4 px-6 py-3.5">
+                    <div key={`${s.name}-${i}`} className="flex items-center gap-4 px-6 py-3.5">
                       <span
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white ${
                           i === 0 ? "bg-amber-500" : i === 1 ? "bg-slate-400" : "bg-amber-700"
@@ -358,12 +443,6 @@ export default function DashboardPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-[#0a1633]">{s.name}</p>
                         <p className="mt-0.5 text-xs text-slate-500">{s.products} {t("products")}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-emerald-600">{s.revenue}</p>
-                        <p className="flex items-center justify-end gap-0.5 text-xs text-amber-500">
-                          <Star className="h-3 w-3 fill-amber-400" /> {s.rating}
-                        </p>
                       </div>
                     </div>
                   ))}
@@ -382,14 +461,84 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-amber-100">
-                  <div className="h-full rounded-full bg-amber-500" style={{ width: "78%" }} />
+                  <div
+                    className="h-full rounded-full bg-amber-500"
+                    style={{ width: `${orders.total ? Math.min(100, (orders.revenueOrders / orders.total) * 100) : 0}%` }}
+                  />
                 </div>
                 <div className="mt-2 flex items-center justify-between text-[10px] font-medium text-slate-500">
-                  <span>78/100 {t("soldCount")}</span>
-                  <span className="font-bold text-amber-600">{t("endsIn")} 6 {t("admin.hours")}</span>
+                  <span>{orders.revenueOrders}/{orders.total} {t("soldCount")}</span>
+                  <span className="font-bold text-amber-600">{orders.thisMonth} {t("admin.thisMonthTx")}</span>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* ====== LAPORAN PRODUK ====== */}
+          <div className="mt-6 rounded-2xl border border-slate-100 bg-white shadow-card">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-500">
+                  <Flag className="h-4 w-4" />
+                </span>
+                <div>
+                  <h3 className="font-semibold text-[#0a1633]">{t("report.adminTitle")}</h3>
+                  <p className="mt-0.5 text-xs text-slate-500">{t("report.adminSubtitle")}</p>
+                </div>
+              </div>
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">
+                {reports.filter((r) => r.status === "pending").length} {t("report.pendingCount")}
+              </span>
+            </div>
+
+            {reports.length ? (
+              <div className="divide-y divide-slate-100">
+                {reports.slice(0, 6).map((report) => (
+                  <div key={report.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-[#0a1633]">{report.product_name}</p>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${reportStatusStyles[report.status]}`}>
+                          {t(report.status === "pending" ? "report.statusPending" : report.status === "resolved" ? "report.statusResolved" : "report.statusDismissed")}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {t("report.reason")}: <span className="font-medium text-slate-600">{report.reason}</span>
+                        {report.reporter ? ` · ${t("report.reporter")}: ${report.reporter}` : ""}
+                        {" · "}
+                        {new Date(report.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                      </p>
+                      {report.description ? <p className="mt-1 truncate text-xs text-slate-400">{report.description}</p> : null}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {report.status !== "resolved" ? (
+                        <button
+                          type="button"
+                          disabled={busyReportId === report.id}
+                          onClick={() => setReportStatus(report.id, "resolved")}
+                          className="rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-600 transition-colors hover:bg-emerald-100 disabled:opacity-60"
+                        >
+                          {busyReportId === report.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                          {t("report.markResolved")}
+                        </button>
+                      ) : null}
+                      {report.status !== "dismissed" ? (
+                        <button
+                          type="button"
+                          disabled={busyReportId === report.id}
+                          onClick={() => setReportStatus(report.id, "dismissed")}
+                          className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-200 disabled:opacity-60"
+                        >
+                          {t("report.markDismissed")}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="px-6 py-10 text-center text-sm text-slate-500">{t("report.empty")}</p>
+            )}
           </div>
         </main>
       </div>
@@ -398,18 +547,19 @@ export default function DashboardPage() {
 }
 
 function TodayDate() {
+  const { language } = useLanguage();
   const [text, setText] = useState("");
 
   useEffect(() => {
     setText(
-      new Date().toLocaleDateString("id-ID", {
+      new Date().toLocaleDateString(language === "en" ? "en-GB" : "id-ID", {
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       })
     );
-  }, []);
+  }, [language]);
 
   return <span className="font-medium text-[#0a1633]">{text}</span>;
 }
@@ -482,16 +632,21 @@ function PaymentMethodRow({
   name,
   pct,
   color,
+  count,
 }: {
   name: string;
   pct: number;
   color: string;
+  count?: number;
 }) {
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-xs">
         <span className="font-medium text-[#0a1633]">{name}</span>
-        <span className="font-semibold text-slate-600">{pct}%</span>
+        <span className="font-semibold text-slate-600">
+          {count != null ? `${count}x · ` : ""}
+          {pct}%
+        </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />

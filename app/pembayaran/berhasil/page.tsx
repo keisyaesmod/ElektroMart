@@ -19,9 +19,11 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/lib/CartContext";
 import { formatRupiah } from "@/lib/data";
+import { useLanguage } from "@/lib/i18n";
 
 export default function PaymentSuccessPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { checkoutDetail } = useCart();
   const [countdown, setCountdown] = useState(10);
   const [note, setNote] = useState("");
@@ -46,12 +48,12 @@ export default function PaymentSuccessPage() {
 
   useEffect(() => {
     const approved = [
-      "Pembayaran kamu telah kami terima. Pesanan sedang disiapkan sebelum dikirim!",
-      "Pembayaran berhasil! Seller sedang memproses pesanan kamu.",
-      "Terima kasih! Pembayaran kamu sudah dikonfirmasi dan pesanan segera diproses.",
+      t("success.note1"),
+      t("success.note2"),
+      t("success.note3"),
     ];
     setNote(approved[Math.floor(Math.random() * approved.length)]);
-  }, []);
+  }, [t]);
 
   if (!checkoutDetail) return null;
   const detail = checkoutDetail;
@@ -67,11 +69,11 @@ export default function PaymentSuccessPage() {
             <CheckCircle2 className="h-12 w-12 text-emerald-500" />
           </div>
           <h1 className="mt-5 text-3xl font-bold text-navy-900">
-            Pembayaran Berhasil!
+            {t("success.title")}
           </h1>
           <p className="mx-auto mt-2 max-w-lg text-sm text-slate-500">{note}</p>
           <p className="mt-1 text-xs text-slate-400">
-            No. Pesanan:{" "}
+            {t("pay.orderNo")}{" "}
             <span className="font-semibold text-navy-900">{detail.orderId}</span>
           </p>
         </div>
@@ -79,15 +81,15 @@ export default function PaymentSuccessPage() {
         {/* Auto redirect */}
         <div className="mt-6 flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-white px-4 py-3 text-xs text-slate-400 shadow-card">
           <Clock className="h-3.5 w-3.5" />
-          Kamu akan diarahkan ke Beranda dalam{" "}
-          <span className="font-bold text-navy-900">{countdown} detik</span>…
+          <span>{t("success.redirectTo")}{" "}</span>
+          <span className="font-bold text-navy-900">{countdown} {t("success.seconds")}</span>…
         </div>
 
         {/* Detail pesanan */}
         <div className="mt-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-card">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
             <ReceiptText className="h-4 w-4 text-brand-blue" />
-            <h2 className="text-sm font-semibold text-navy-900">Ringkasan Pesanan</h2>
+            <h2 className="text-sm font-semibold text-navy-900">{t("checkout.orderSummary")}</h2>
           </div>
 
           <div className="divide-y divide-slate-100">
@@ -116,25 +118,25 @@ export default function PaymentSuccessPage() {
 
           <div className="space-y-2 border-t border-slate-100 pt-4 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-500">Subtotal</span>
+              <span className="text-slate-500">{t("pay.subtotal")}</span>
               <span className="font-medium text-navy-900">
                 {formatRupiah(detail.subtotal)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Ongkir ({detail.courier})</span>
+              <span className="text-slate-500">{t("success.shippingWith", { courier: detail.courier })}</span>
               <span className="font-medium text-navy-900">
                 {detail.shippingFee > 0 ? formatRupiah(detail.shippingFee) : "-"}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Asuransi pengiriman</span>
+              <span className="text-slate-500">{t("pay.shippingInsurance")}</span>
               <span className="font-medium text-navy-900">
                 {formatRupiah(detail.insuranceFee)}
               </span>
             </div>
             <div className="flex justify-between border-t border-slate-100 pt-2">
-              <span className="font-semibold text-navy-900">Total Dibayar</span>
+              <span className="font-semibold text-navy-900">{t("success.totalPaid")}</span>
               <span className="text-lg font-bold text-brand-blue">
                 {formatRupiah(detail.total)}
               </span>
@@ -148,23 +150,23 @@ export default function PaymentSuccessPage() {
             icon={Package}
             color="text-blue-600"
             bg="bg-blue-50"
-            title="Pesanan Dibuat"
-            desc="Sedang menunggu diproses seller"
+            title={t("success.orderCreated")}
+            desc={t("success.waitingSeller")}
             done
           />
           <StatusCard
             icon={Truck}
             color="text-amber-600"
             bg="bg-amber-50"
-            title="Sedang Dikirim"
-            desc="Menunggu seller mengirim barang"
+            title={t("success.shipping")}
+            desc={t("success.waitingShip")}
           />
           <StatusCard
             icon={Home}
             color="text-emerald-600"
             bg="bg-emerald-50"
-            title="Pesanan Sampai"
-            desc="Estimasi 1-3 hari kerja"
+            title={t("success.delivered")}
+            desc={t("success.etaWorkdays")}
           />
         </div>
 
@@ -173,24 +175,24 @@ export default function PaymentSuccessPage() {
           <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-card">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-brand-blue" />
-              <p className="text-sm font-semibold text-navy-900">Alamat Pengiriman</p>
+              <p className="text-sm font-semibold text-navy-900">{t("order.shippingAddress")}</p>
             </div>
             <p className="mt-3 text-xs leading-relaxed text-slate-600">
               {detail.address}
             </p>
-            <p className="mt-1 text-xs text-slate-400">via {detail.courier}</p>
+            <p className="mt-1 text-xs text-slate-400">{t("success.via", { courier: detail.courier })}</p>
           </div>
 
           <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-card">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-brand-blue" />
-              <p className="text-sm font-semibold text-navy-900">Pembayaran</p>
+              <p className="text-sm font-semibold text-navy-900">{t("success.payment")}</p>
             </div>
             <p className="mt-3 text-xs font-medium text-navy-900">
               {detail.paymentMethod}
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              Dana ditahan ElektroMart hingga pesanan kamu terima.
+              {t("success.escrow")}
             </p>
           </div>
         </div>
@@ -201,13 +203,13 @@ export default function PaymentSuccessPage() {
             href="/kategori/semua"
             className="flex items-center justify-center gap-2 rounded-lg bg-brand-blue px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            Lanjut Belanja <ChevronRight className="h-4 w-4" />
+            {t("success.continueShop")} <ChevronRight className="h-4 w-4" />
           </Link>
           <Link
             href="/bantuan"
             className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-navy-900 hover:bg-slate-50"
           >
-            Lacak Pesanan
+            {t("lacakPesanan")}
           </Link>
         </div>
       </div>

@@ -8,10 +8,12 @@ import {
   Package,
   Percent,
   Truck,
-  Users,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useLanguage } from "@/lib/i18n";
 import TopBar from "../components/TopBar";
+import { api, type ProductRecord } from "@/lib/api";
+import { formatRupiah } from "@/lib/data";
 
 interface StatCard {
   labelKey: string;
@@ -22,27 +24,63 @@ interface StatCard {
   iconWrap: string;
 }
 
-const stats: StatCard[] = [
-  { labelKey: "seller.totalSales", value: "Rp 45.850.000", change: "+12.5%", changeUp: true, icon: CreditCard, iconWrap: "bg-[#E8EEF8] text-[#3B5B8C]" },
-  { labelKey: "seller.activeOrders", value: "124", change: "+5.2%", changeUp: true, icon: Truck, iconWrap: "bg-[#FFF1E6] text-[#D97706]" },
-  { labelKey: "seller.totalVisitors", value: "8.405", change: "-2.1%", changeUp: false, icon: Users, iconWrap: "bg-[#EEF1F6] text-[#64748B]" },
-  { labelKey: "seller.conversionRate", value: "3.2%", change: "+0.8%", changeUp: true, icon: Percent, iconWrap: "bg-[#E8EEF8] text-[#3B5B8C]" },
-];
+interface WeekPoint {
+  day: string;
+  key: string;
+  value: number;
+}
 
-const weeklySales = [
-  { day: "Sen", dayKey: "seller.dayMon", value: 3.4 },
-  { day: "Sel", dayKey: "seller.dayTue", value: 5.4 },
-  { day: "Rab", dayKey: "seller.dayWed", value: 2.8 },
-  { day: "Kam", dayKey: "seller.dayThu", value: 7.6 },
-  { day: "Jum", dayKey: "seller.dayFri", value: 9.8 },
-  { day: "Sab", dayKey: "seller.daySat", value: 4.6 },
-  { day: "Min", dayKey: "seller.daySun", value: 6.9 },
-];
-
-const yTicks = ["10Jt", "7.5Jt", "5Jt", "2.5Jt", "0"];
+interface SellerStats {
+  products: number;
+  active: number;
+  lowStock: number;
+  outOfStock: number;
+  totalRevenue: number;
+  totalOrders: number;
+  activeOrders: number;
+}
 
 export default function Dashboard() {
   const { t } = useLanguage();
+  const [apiStats, setApiStats] = useState<SellerStats>({
+    products: 0,
+    active: 0,
+    lowStock: 0,
+    outOfStock: 0,
+    totalRevenue: 0,
+    totalOrders: 0,
+    activeOrders: 0,
+  });
+  const [weekly, setWeekly] = useState<WeekPoint[]>([]);
+  const [recentProducts, setRecentProducts] = useState<ProductRecord[]>([]);
+
+  useEffect(() => {
+    void api<{
+      stats: SellerStats;
+      weekly?: WeekPoint[];
+      recentProducts?: ProductRecord[];
+    }>("/api/dashboard/seller")
+      .then((data) => {
+        setApiStats(data.stats);
+        setWeekly(data.weekly || []);
+        setRecentProducts(data.recentProducts || []);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const stats: StatCard[] = [
+    { labelKey: "seller.totalSales", value: formatRupiah(apiStats.totalRevenue), change: `${apiStats.totalOrders} ${t("seller.orders")}`, changeUp: true, icon: CreditCard, iconWrap: "bg-[#E8EEF8] text-[#3B5B8C]" },
+    { labelKey: "seller.activeOrders", value: String(apiStats.activeOrders), change: t("admin.fromDatabase"), changeUp: true, icon: Truck, iconWrap: "bg-[#FFF1E6] text-[#D97706]" },
+    { labelKey: "seller.myProducts", value: String(apiStats.products), change: `${apiStats.active} ${t("admin.active")}`, changeUp: true, icon: Package, iconWrap: "bg-[#EEF1F6] text-[#64748B]" },
+    { labelKey: "seller.outOfStock", value: String(apiStats.outOfStock), change: `${apiStats.lowStock} ${t("seller.lowStockShort")}`, changeUp: false, icon: Percent, iconWrap: "bg-[#E8EEF8] text-[#3B5B8C]" },
+  ];
+
+  const totalDays = weekly.length ? weekly.reduce((sum, w) => sum + w.value, 0) : 0;
+  const peakValue = Math.max(...(weekly.length ? weekly.map((w) => w.value) : [0]), 1);
+  const peakIndex = weekly.findIndex((w) => w.value === peakValue);
+  const fmtJt = (v: number) => (v >= 1e6 ? `Rp ${(v / 1e6).toFixed(v % 1e6 === 0 ? 0 : 1)}Jt` : v >= 1000 ? `Rp ${Math.round(v / 1000)}rb` : `Rp ${v}`);
+  const yTicks = [peakValue, peakValue * 0.75, peakValue * 0.5, peakValue * 0.25, 0].map((v) => fmtJt(Math.round(v)));
+  const chartPoints = weekly.length ? weekly : [];
   return (
     <div className="flex-1 overflow-y-auto bg-seller-canvas">
       <TopBar placeholder={t("seller.searchOrdersProducts")} />
@@ -104,14 +142,14 @@ export default function Dashboard() {
                     <div key={tick} className="border-t border-[#F1F4F8]" />
                   ))}
                 </div>
-                {weeklySales.map((d) => {
-                  const isPeak = d.day === "Jum";
-                  const heightPct = (d.value / 10) * 100;
+                {chartPoints.map((d, idx) => {
+                  const isPeak = idx === peakIndex && d.value > 0;
+                  const heightPct = d.value > 0 ? (d.value / peakValue) * 100 : 3;
                   return (
                     <div key={d.day} className="relative z-10 flex h-full flex-1 flex-col items-center justify-end">
                       {isPeak && (
                         <span className="mb-2 rounded-md bg-seller-ink px-2 py-1 text-[11px] font-semibold text-white">
-                          Rp {d.value.toFixed(1)}Jt
+                          {fmtJt(d.value)}
                         </span>
                       )}
                       <div
@@ -119,7 +157,7 @@ export default function Dashboard() {
                         style={{ height: `${heightPct}%` }}
                       />
                       <span className={`mt-2 text-xs ${isPeak ? "font-semibold text-seller-ink" : "text-seller-muted"}`}>
-                        {t(d.dayKey)}
+                        {t(d.key)}
                       </span>
                     </div>
                   );
@@ -135,13 +173,13 @@ export default function Dashboard() {
             </div>
 
             <div className="flex flex-col gap-3">
-              <div className="flex gap-3 rounded-xl bg-[#F3F7FF] p-4">
-                <ClipboardList size={18} className="mt-0.5 shrink-0 text-[#3B5B8C]" />
-                <div>
-                  <p className="text-sm font-semibold text-seller-ink">{t("seller.lowStock")}</p>
-                  <p className="mt-0.5 text-sm text-seller-muted">{t("seller.lowStockDesc")}</p>
+<div className="flex gap-3 rounded-xl bg-[#F3F7FF] p-4">
+                  <ClipboardList size={18} className="mt-0.5 shrink-0 text-[#3B5B8C]" />
+                  <div>
+                    <p className="text-sm font-semibold text-seller-ink">{t("seller.lowStock")}</p>
+                    <p className="mt-0.5 text-sm text-seller-muted">{apiStats.lowStock} / {apiStats.outOfStock}</p>
+                  </div>
                 </div>
-              </div>
               <div className="flex gap-3 rounded-xl bg-[#F3F7FF] p-4">
                 <Package size={18} className="mt-0.5 shrink-0 text-[#3B5B8C]" />
                 <div>
@@ -155,6 +193,47 @@ export default function Dashboard() {
               {t("seller.viewAllNotifications")}
             </button>
           </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl bg-white p-6 shadow-card">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-seller-ink">{t("seller.recentProducts")}</h2>
+            <span className="rounded-full bg-[#E9F8EF] px-2.5 py-0.5 text-xs font-semibold text-[#16A34A]">
+              {t("seller.totalWeekly")}: {fmtJt(totalDays)}
+            </span>
+          </div>
+          {recentProducts.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[#EEF1F6] text-xs text-seller-muted">
+                    <th className="pb-3 font-medium">{t("seller.productName")}</th>
+                    <th className="pb-3 font-medium">{t("seller.category")}</th>
+                    <th className="pb-3 font-medium">{t("seller.price")}</th>
+                    <th className="pb-3 font-medium">{t("seller.stock")}</th>
+                    <th className="pb-3 font-medium">{t("seller.status")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EEF1F6]">
+                  {recentProducts.map((p) => (
+                    <tr key={p.id}>
+                      <td className="py-3 font-semibold text-seller-ink">{p.name}</td>
+                      <td className="py-3 text-seller-muted">{p.category || "-"}</td>
+                      <td className="py-3 font-semibold text-seller-ink">{formatRupiah(p.price)}</td>
+                      <td className="py-3 text-seller-muted">{p.stock}</td>
+                      <td className="py-3">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${p.status === "active" ? "bg-[#E9F8EF] text-[#16A34A]" : p.status === "out_of_stock" ? "bg-[#FDECEC] text-[#E11D48]" : "bg-[#EEF1F6] text-seller-muted"}`}>
+                          {p.status === "active" ? t("admin.active") : p.status === "out_of_stock" ? t("seller.outOfStock") : t("seller.draft")}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-seller-muted">{t("seller.noProducts")}</p>
+          )}
         </div>
       </div>
     </div>
