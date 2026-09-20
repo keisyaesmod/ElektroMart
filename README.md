@@ -53,11 +53,3 @@ npm run dev:api
 5. Frontend: `npm run dev` (http://localhost:3000) memanggil `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`).
 
 CRUD admin: kategori, seller, buyer. CRUD seller: produk. Profil buyer menyimpan data pribadi + alamat pengiriman ke database.
-
-## Catatan
-
-- Gambar produk memakai Unsplash sebagai placeholder — ganti dengan URL gambar asli
-  (dari Supabase Storage / S3 / dsb) setelah backend siap.
-- Warna brand (navy + orange) diatur di `tailwind.config.js` (`navy.*`, `brand.blue`, `brand.orange`).
-- Countdown flash sale murni client-side (`FlashSale.tsx`); untuk versi production
-  sebaiknya waktu berakhir diambil dari backend agar konsisten antar user.
