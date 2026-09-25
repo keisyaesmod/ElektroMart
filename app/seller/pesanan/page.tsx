@@ -20,7 +20,7 @@ const orders: OrderItem[] = [
     id: "1",
     code: "ORD-20231024-001",
     date: "24 Okt 2023, 14:30 WIB",
-    productName: "MacBook Pro 16-inch M2...",
+    productName: "MacBook Air M3 13 Inch 256GB",
     variant: "32GB RAM / 1TB SSD",
     qty: 1,
     unitPrice: 45000000,
@@ -28,13 +28,13 @@ const orders: OrderItem[] = [
     courier: "GoSend Instant (Resi Otomatis)",
     total: 45050000,
     status: "PERLU DIPROSES",
-    imageSrc: "/products/macbook-m3.svg",
+    imageSrc: "https://macfinder.co.uk/wp-content/smush-webp/2023/02/img-MacBook-Air-13-Inch-99681-scaled-1250x1250.jpg.webp",
   },
   {
     id: "2",
     code: "ORD-20231024-042",
     date: "24 Okt 2023, 11:15 WIB",
-    productName: "Samsung Galaxy S23 Ultra",
+    productName: "Samsung Galaxy S24 Ultra 12/512GB",
     variant: "Phantom Black / 512GB",
     qty: 1,
     unitPrice: 21999000,
@@ -42,7 +42,7 @@ const orders: OrderItem[] = [
     courier: "JNE Reguler (Tunggu Kurir Pick-up)",
     total: 22020000,
     status: "SIAP DIKIRIM",
-    imageSrc: "/products/samsung-s24.svg",
+    imageSrc: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQESsGQQVqX2nRAl1g9PmyB3RJNu8B-_g34hi7fvuUNMt4lue4MQ4WDSww&s=10",
   },
 ];
 
@@ -136,8 +136,8 @@ export default function Orders() {
 
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
                   <div className="flex min-w-0 flex-1 items-center gap-4">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#F4F6FA]">
-                      <img src={o.imageSrc} alt="" className="h-full w-full object-contain" />
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#F4F6FA]">
+                      <img src={o.imageSrc} alt={o.productName} className="h-full w-full object-contain" />
                     </div>
                     <div>
                       <p className="font-semibold text-seller-ink">{o.productName}</p>

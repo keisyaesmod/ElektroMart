@@ -102,7 +102,6 @@ export default function AdminKategori() {
                   <tr className="bg-[#F4F6FA] text-[11px] uppercase tracking-wide text-admin-muted">
                     <th className="px-4 py-3 font-semibold">{t("admin.categoryName")}</th>
                     <th className="px-4 py-3 font-semibold">{t("admin.identityColor")}</th>
-                    <th className="px-4 py-3 font-semibold">{t("admin.subCategory")}</th>
                     <th className="px-4 py-3 font-semibold">{t("admin.actions")}</th>
                   </tr>
                 </thead>
@@ -115,9 +114,6 @@ export default function AdminKategori() {
                           <span className="h-3.5 w-3.5 rounded-full" style={{ background: c.color || "#94a3b8" }} />
                           {c.color}
                         </span>
-                      </td>
-                      <td className="px-4">
-                        <span className="rounded-full bg-[#E8F0FE] px-2.5 py-1 text-xs font-semibold text-[#2563EB]">{c.subcategories?.length || 0}</span>
                       </td>
                       <td className="px-4">
                         <div className="flex gap-2">
@@ -150,8 +146,6 @@ export default function AdminKategori() {
               <span className="h-11 w-11 rounded-lg border border-[#E4E8F1]" style={{ background: color }} />
               <input value={color} onChange={(e) => setColor(e.target.value)} className="h-11 flex-1 rounded-lg border border-[#E4E8F1] px-3 text-sm outline-none" />
             </div>
-            <label className="mb-1.5 block text-sm font-semibold text-admin-ink">{t("admin.initialSubCategory")}</label>
-            <textarea value={subs} onChange={(e) => setSubs(e.target.value)} rows={4} placeholder={t("admin.subCategoryPlaceholder")} className="mb-5 w-full rounded-lg border border-[#E4E8F1] px-3 py-2 text-sm outline-none" />
             <button type="button" onClick={() => void saveCategory()} className="w-full rounded-xl bg-admin-accent py-3 text-sm font-semibold text-white">
               {t("admin.saveCategory")}
             </button>

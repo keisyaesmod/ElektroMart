@@ -41,16 +41,32 @@ const colorMap: Record<string, string> = {
   Cable: "text-violet-600 bg-violet-50",
 };
 
+function isHomepageCategory(category: { name: string }) {
+  const homepageCategories = new Set([
+    "smartphone",
+    "laptop",
+    "tv & audio",
+    "kamera",
+    "audio",
+    "gaming",
+    "smart watch",
+    "kabel & charger",
+  ]);
+  return homepageCategories.has(category.name.trim().toLowerCase());
+}
+
 export default function Categories() {
   const { t } = useLanguage();
-  const [categories, setCategories] = useState(fallbackCategories);
+  const [categories, setCategories] = useState(
+    fallbackCategories.filter(isHomepageCategory),
+  );
 
   useEffect(() => {
     void api<{ categories: CategoryRecord[] }>("/api/categories")
       .then((data) => {
         if (!data.categories?.length) return;
         setCategories(
-          data.categories.map((category) => ({
+          data.categories.filter(isHomepageCategory).map((category) => ({
             id: category.id,
             name: category.name,
             icon: category.icon || "Smartphone",
@@ -77,7 +93,7 @@ export default function Categories() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
-        {categories.map((cat) => {
+        {categories.filter(isHomepageCategory).map((cat) => {
           const Icon = iconMap[cat.icon] || Smartphone;
           return (
             <Link

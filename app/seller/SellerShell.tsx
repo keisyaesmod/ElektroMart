@@ -48,7 +48,7 @@ export default function SellerShell({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="mt-auto border-t border-white/10 pt-4">
-          <Link href="/bantuan" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-white/70 hover:bg-white/8 hover:text-white">
+          <Link href="/bantuan-penjual" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-white/70 hover:bg-white/8 hover:text-white">
             <CircleHelp size={18} strokeWidth={1.8} /> {t("helpCenter")}
           </Link>
           <Link href="/beranda" className="mt-0.5 flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-white/70 hover:bg-white/8 hover:text-white">

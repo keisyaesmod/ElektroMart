@@ -70,7 +70,7 @@ export default function Dashboard() {
 
   const stats: StatCard[] = [
     { labelKey: "seller.totalSales", value: formatRupiah(apiStats.totalRevenue), change: `${apiStats.totalOrders} ${t("seller.orders")}`, changeUp: true, icon: CreditCard, iconWrap: "bg-[#E8EEF8] text-[#3B5B8C]" },
-    { labelKey: "seller.activeOrders", value: String(apiStats.activeOrders), change: t("admin.fromDatabase"), changeUp: true, icon: Truck, iconWrap: "bg-[#FFF1E6] text-[#D97706]" },
+    { labelKey: "seller.activeOrders", value: "0", change: t("admin.fromDatabase"), changeUp: true, icon: Truck, iconWrap: "bg-[#FFF1E6] text-[#D97706]" },
     { labelKey: "seller.myProducts", value: String(apiStats.products), change: `${apiStats.active} ${t("admin.active")}`, changeUp: true, icon: Package, iconWrap: "bg-[#EEF1F6] text-[#64748B]" },
     { labelKey: "seller.outOfStock", value: String(apiStats.outOfStock), change: `${apiStats.lowStock} ${t("seller.lowStockShort")}`, changeUp: false, icon: Percent, iconWrap: "bg-[#E8EEF8] text-[#3B5B8C]" },
   ];
@@ -78,6 +78,7 @@ export default function Dashboard() {
   const totalDays = weekly.length ? weekly.reduce((sum, w) => sum + w.value, 0) : 0;
   const peakValue = Math.max(...(weekly.length ? weekly.map((w) => w.value) : [0]), 1);
   const peakIndex = weekly.findIndex((w) => w.value === peakValue);
+  const todayLabel = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
   const fmtJt = (v: number) => (v >= 1e6 ? `Rp ${(v / 1e6).toFixed(v % 1e6 === 0 ? 0 : 1)}Jt` : v >= 1000 ? `Rp ${Math.round(v / 1000)}rb` : `Rp ${v}`);
   const yTicks = [peakValue, peakValue * 0.75, peakValue * 0.5, peakValue * 0.25, 0].map((v) => fmtJt(Math.round(v)));
   const chartPoints = weekly.length ? weekly : [];
@@ -89,7 +90,7 @@ export default function Dashboard() {
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-[28px] font-bold tracking-tight text-seller-ink">{t("seller.businessSummary")}</h1>
-            <p className="mt-1 text-sm text-seller-muted">{t("seller.storePerformanceToday")}</p>
+            <p className="mt-1 text-sm text-seller-muted">{t("seller.storePerformanceToday")}, {todayLabel}</p>
           </div>
           <button type="button" className="flex items-center gap-2 rounded-xl border border-[#E4E8F1] bg-white px-4 py-2.5 text-sm font-medium text-seller-ink shadow-sm">
             <CalendarDays size={16} className="text-seller-muted" />
@@ -166,33 +167,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-card">
-            <div className="mb-4 flex items-center gap-2">
-              <AlertTriangle size={18} className="text-amber-500" />
-              <h2 className="text-lg font-bold text-seller-ink">{t("seller.needAction")}</h2>
-            </div>
-
-            <div className="flex flex-col gap-3">
-<div className="flex gap-3 rounded-xl bg-[#F3F7FF] p-4">
-                  <ClipboardList size={18} className="mt-0.5 shrink-0 text-[#3B5B8C]" />
-                  <div>
-                    <p className="text-sm font-semibold text-seller-ink">{t("seller.lowStock")}</p>
-                    <p className="mt-0.5 text-sm text-seller-muted">{apiStats.lowStock} / {apiStats.outOfStock}</p>
-                  </div>
-                </div>
-              <div className="flex gap-3 rounded-xl bg-[#F3F7FF] p-4">
-                <Package size={18} className="mt-0.5 shrink-0 text-[#3B5B8C]" />
-                <div>
-                  <p className="text-sm font-semibold text-seller-ink">{t("seller.ordersWaitingShipment")}</p>
-                  <p className="mt-0.5 text-sm text-seller-muted">{t("seller.shipmentDeadline")}</p>
-                </div>
-              </div>
-            </div>
-
-            <button type="button" className="mt-5 w-full rounded-xl border border-[#E4E8F1] py-2.5 text-sm font-semibold text-seller-ink">
-              {t("seller.viewAllNotifications")}
-            </button>
-          </div>
         </div>
 
         <div className="mt-5 rounded-2xl bg-white p-6 shadow-card">

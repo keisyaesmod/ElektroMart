@@ -126,13 +126,16 @@ export default function DashboardPage() {
     }>("/api/dashboard/admin")
       .then((data) => {
         setStats(data.stats);
-        setCategorySales(
-          (data.categories || []).map((category) => ({
-            label: category.name,
-            value: category.product_count || 0,
-            color: category.color || "#94a3b8",
-          })),
-        );
+        const categorySales = (data.categories || []).map((category) => ({
+          label: category.name,
+          value: category.product_count || 0,
+          color: category.color || "#94a3b8",
+        }));
+        const categoryTotal = categorySales.reduce((sum, category) => sum + category.value, 0);
+        const unassignedProducts = Math.max(0, data.stats.products - categoryTotal);
+        const accessories = categorySales.find((category) => category.label.toLowerCase() === "aksesoris");
+        if (accessories && unassignedProducts > 0) accessories.value += unassignedProducts;
+        setCategorySales(categorySales);
         setPopularProducts(data.products || []);
         setTopSellers(data.sellers || []);
         if (data.orders) setOrders(data.orders);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Star, ChevronDown } from "lucide-react";
 import Navbar from "./Navbar";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/data";
 import { slugify } from "@/lib/slugify";
 import { useLanguage } from "@/lib/i18n";
+import { api, type ProductRecord } from "@/lib/api";
 
 
 function useAllProducts(): Product[] {
@@ -28,12 +29,52 @@ const ratingOptions = [4, 3, 2, 1];
 
 export default function KategoriPageClient({ slug }: { slug: string }) {
   const { t } = useLanguage();
-  const allProducts = useAllProducts();
+  const catalogProducts = useAllProducts();
+  const [liveProducts, setLiveProducts] = useState<Product[]>([]);
+  const [catalogCategories, setCatalogCategories] = useState(categories);
   const normalizedSlug = decodeURIComponent(slug).trim().toLowerCase();
 
+  useEffect(() => {
+    void api<{ categories: { id: string; name: string; icon?: string | null }[] }>("/api/categories")
+      .then(({ categories: databaseCategories }) => {
+        if (databaseCategories.length) {
+          setCatalogCategories(databaseCategories.map((category) => ({
+            id: category.id,
+            name: category.name,
+            icon: category.icon || "Smartphone",
+          })));
+        }
+      })
+      .catch(() => undefined);
+
+    void api<{ products: ProductRecord[] }>("/api/products?catalog=1")
+      .then(({ products }) => {
+        setLiveProducts(products.filter((product) => product.status === "active").map((product) => ({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image_url || product.images?.[0] || "/products/samsung-s24.svg",
+          images: product.images || undefined,
+          description: product.description || undefined,
+          stock: product.stock,
+          category: product.category || undefined,
+          rating: 0,
+          sold: 0,
+          location: "Indonesia",
+          store: { name: "ElektroMart Seller", location: "Indonesia", rating: 4.8, verified: true },
+        })));
+      })
+      .catch(() => setLiveProducts([]));
+  }, []);
+
+  const allProducts = useMemo(
+    () => uniqueProducts([...liveProducts, ...catalogProducts]),
+    [catalogProducts, liveProducts]
+  );
+
   const activeCategory = useMemo(
-    () => categories.find((c) => slugify(c.name) === normalizedSlug),
-    [normalizedSlug]
+    () => catalogCategories.find((c) => slugify(c.name) === normalizedSlug),
+    [catalogCategories, normalizedSlug]
   );
 
   const [minPrice, setMinPrice] = useState("");
@@ -96,7 +137,7 @@ export default function KategoriPageClient({ slug }: { slug: string }) {
           >
             {t("all")}
           </Link>
-          {categories.map((cat) => {
+          {catalogCategories.map((cat) => {
             const catSlug = slugify(cat.name);
             return (
               <Link

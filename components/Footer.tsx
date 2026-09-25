@@ -10,17 +10,16 @@ export default function Footer() {
     { 
       title: t("buy"), 
       links: [
-        { label: t("caraBelanja"), href: "/bantuan" },
-        { label: t("lacakPesanan"), href: "/bantuan" },
-        { label: t("bantuanBuyer"), href: "/bantuan" },
+        { label: t("caraBelanja"), href: "/beli#cara-belanja" },
+        { label: t("lacakPesanan"), href: "/beli#lacak-pesanan" },
+        { label: t("bantuanBuyer"), href: "/beli#bantuan-buyer" },
       ]
     },
     { 
       title: t("sell"), 
       links: [
-        { label: t("daftarSeller"), href: "/register-penjual" },
-        { label: t("pusatEdukasiSeller"), href: "/bantuan" },
-        { label: t("centerIklan"), href: "/bantuan" },
+        { label: t("daftarSeller"), href: "/jual#daftar-seller" },
+        { label: t("pusatEdukasiSeller"), href: "/jual#pusat-edukasi-seller" },
       ]
     },
     { 

@@ -46,6 +46,16 @@ function slugify(value) {
     .replace(/(^-|-$)/g, "") || "kategori";
 }
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+}
+
+function parseAmount(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const digits = String(value || "").replace(/[^0-9]/g, "");
+  return Number(digits) || 0;
+}
+
 function mapProduct(row) {
   return {
     id: row.id,
@@ -314,7 +324,7 @@ app.delete("/api/categories/:id", requireUser, requireRole("admin"), async (req,
 
 app.get("/api/products", optionalUser, async (req, res) => {
   let query = supabase.from("products").select("*").order("created_at", { ascending: false });
-  if (req.profile?.role === "seller") query = query.eq("seller_id", req.user.id);
+  if (req.profile?.role === "seller" && req.query.catalog !== "1") query = query.eq("seller_id", req.user.id);
   if (req.query.sellerId) query = query.eq("seller_id", String(req.query.sellerId));
   const { data, error } = await query;
   if (error) return res.status(400).json({ error: error.message });
@@ -375,7 +385,7 @@ app.post("/api/products", requireUser, requireRole("seller", "admin"), async (re
     sku: body.sku || null,
     category: body.category || null,
     description: body.description || null,
-    price: Number(body.price || 0),
+    price: parseAmount(body.price),
     stock,
     status,
     image_url: body.image_url || null,
@@ -406,7 +416,7 @@ app.patch("/api/products/:id", requireUser, requireRole("seller", "admin"), asyn
   if (await productsImagesEnabled() && body.images !== undefined) {
     payload.images = Array.isArray(body.images) ? body.images.filter(Boolean) : [];
   }
-  if (body.price !== undefined) payload.price = Number(body.price);
+  if (body.price !== undefined) payload.price = parseAmount(body.price);
   if (body.stock !== undefined) {
     payload.stock = Number(body.stock);
     if (!body.status) payload.status = payload.stock <= 0 ? "out_of_stock" : existing.status === "draft" ? "draft" : "active";
@@ -551,6 +561,23 @@ app.post("/api/orders", requireUser, requireRole("buyer", "admin"), async (req, 
   const shippingFee = Number(body.shipping_fee || 0);
   const courier = body.courier || "";
   const total = Number(body.total || subtotal + productFee + insuranceFee + shippingFee);
+  const resolvedItems = await Promise.all(
+    items.map(async (item) => {
+      if (isUuid(item.product_id)) return { ...item, product_id: item.product_id };
+      if (!item.product_name && !item.name) return { ...item, product_id: null };
+      const { data: product } = await supabase
+        .from("products")
+        .select("id, seller_id")
+        .eq("name", item.product_name || item.name)
+        .limit(1)
+        .maybeSingle();
+      return {
+        ...item,
+        product_id: product?.id || null,
+        seller_id: item.seller_id || product?.seller_id || null,
+      };
+    })
+  );
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -572,7 +599,7 @@ app.post("/api/orders", requireUser, requireRole("buyer", "admin"), async (req, 
     .single();
   if (orderError) return res.status(400).json({ error: orderError.message });
 
-  const orderItems = items.map((i) => ({
+  const orderItems = resolvedItems.map((i) => ({
     order_id: order.id,
     product_id: i.product_id || null,
     seller_id: i.seller_id || null,
@@ -591,10 +618,16 @@ app.post("/api/orders", requireUser, requireRole("buyer", "admin"), async (req, 
     return res.status(400).json({ error: itemsError.message });
   }
 
-  for (const i of items) {
+  for (const i of resolvedItems) {
     if (i.product_id) {
-      void supabase.rpc("decrement_product_stock", { product_id: i.product_id, qty: Number(i.qty || 1) })
-        .catch(async () => {
+      void (async () => {
+        try {
+          const { error: rpcError } = await supabase.rpc("decrement_product_stock", {
+            product_id: i.product_id,
+            qty: Number(i.qty || 1),
+          });
+          if (rpcError) throw rpcError;
+        } catch {
           const { data: current } = await supabase.from("products").select("stock").eq("id", i.product_id).maybeSingle();
           if (current) {
             await supabase
@@ -602,7 +635,8 @@ app.post("/api/orders", requireUser, requireRole("buyer", "admin"), async (req, 
               .update({ stock: Math.max(0, Number(current.stock || 0) - Number(i.qty || 1)), updated_at: new Date().toISOString() })
               .eq("id", i.product_id);
           }
-        });
+        }
+      })();
     }
   }
 
@@ -999,21 +1033,21 @@ app.get("/api/dashboard/seller", requireUser, requireRole("seller", "admin"), as
   let revenue = 0;
   let activeOrders = 0;
   let totalOrders = 0;
+  let orderMap = {};
+
   if (orderIds.length) {
     const { data: sellerOrderRows } = await supabase
       .from("orders")
       .select("id, status, created_at")
       .in("id", orderIds);
-    const orderMap = Object.fromEntries((sellerOrderRows || []).map((o) => [o.id, o]));
+    orderMap = Object.fromEntries((sellerOrderRows || []).map((o) => [o.id, o]));
     const activeStats = new Set();
-    const paidStats = new Set();
     itemRows.forEach((i) => {
       const order = orderMap[i.order_id];
       if (!order) return;
       totalOrders += 1;
       if (["paid", "shipped", "completed"].includes(order.status)) {
         revenue += Number(i.subtotal || 0);
-        paidStats.add(order.id);
       }
       if (["waiting_payment", "paid", "shipped"].includes(order.status)) {
         activeStats.add(order.id);

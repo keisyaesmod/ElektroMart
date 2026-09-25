@@ -9,6 +9,10 @@ import { supabase } from "@/lib/supabase";
 
 const EXTRA_SLOTS = 3;
 
+function parseAmount(value: string) {
+  return Number(value.replace(/[^0-9]/g, ""));
+}
+
 export default function AddProduct() {
   const router = useRouter();
   const { t } = useLanguage();
@@ -121,7 +125,9 @@ export default function AddProduct() {
   }
 
   async function handleSave() {
-    if (!name.trim() || !price || stock === "") {
+    const numericPrice = parseAmount(price);
+    const numericStock = parseAmount(stock);
+    if (!name.trim() || !price || !Number.isFinite(numericPrice) || numericPrice <= 0 || stock === "") {
       setError(t("seller.fillRequired"));
       return;
     }
@@ -132,8 +138,8 @@ export default function AddProduct() {
       name: name.trim(),
       category,
       description,
-      price: Number(price),
-      stock: Number(stock),
+      price: numericPrice,
+      stock: numericStock,
       sku,
       image_url: mainImage || null,
       images,
